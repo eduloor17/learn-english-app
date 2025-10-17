@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lección 3: Colores y Artículos | Básico</title>
+    <link rel="stylesheet" href="../../styles/styles.css"> 
+    <style>
+        .color-card { padding: 15px; border-radius: 8px; margin: 10px; color: white; font-weight: 700; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .color-card.light-text { color: #333; text-shadow: none; border: 1px solid #ccc; }
+        .color-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .writing-ex input { width: 50px; padding: 5px; text-align: center; }
+        .writing-ex p { margin-bottom: 10px; display: flex; align-items: center; }
+        .pronunciation-btn { background: var(--color-secondary); color: white; border: none; padding: 8px 12px; border-radius: 5px; margin-left: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" style="display: block; margin-bottom: 20px;">← Volver a Lecciones Básicas</a>
+
+        <h1 style="color: var(--color-primary);">🎨 Lección 3: Colores, Objetos Comunes y Artículos</h1>
+        <p>Aprende los colores y cómo usar correctamente "a" o "an". ¡Haz clic en el color para escucharlo!</p>
+
+        <hr>
+
+        <h2>1. Los Colores 🟥🟦🟩</h2>
+        <div class="color-grid">
+            <div class="color-card" style="background-color: red;" onclick="speakText('Red')">RED</div>
+            <div class="color-card" style="background-color: blue;" onclick="speakText('Blue')">BLUE</div>
+            <div class="color-card" style="background-color: green;" onclick="speakText('Green')">GREEN</div>
+            <div class="color-card light-text" style="background-color: yellow;" onclick="speakText('Yellow')">YELLOW</div>
+            <div class="color-card" style="background-color: purple;" onclick="speakText('Purple')">PURPLE</div>
+            <div class="color-card" style="background-color: black;" onclick="speakText('Black')">BLACK</div>
+            <div class="color-card" style="background-color: orange;" onclick="speakText('Orange')">ORANGE</div>
+            <div class="color-card light-text" style="background-color: white;" onclick="speakText('White')">WHITE</div>
+            <div class="color-card" style="background-color: brown;" onclick="speakText('Brown')">BROWN</div>
+            <div class="color-card" style="background-color: gray;" onclick="speakText('Gray')">GRAY</div>
+            <div class="color-card" style="background-color: pink;" onclick="speakText('Pink')">PINK</div>
+            <div class="color-card" style="background-color: teal;" onclick="speakText('Teal')">TEAL</div>
+        </div>
+
+        <h2>2. Practica "A" y "AN" 📝</h2>
+        <p style="color: var(--color-light-text);">Recuerda: **AN** antes de sonidos de vocal (a, e, i, o, u); **A** para sonidos de consonante.</p>
+        
+        <div style="margin-bottom: 15px;">
+            <button class="pronunciation-btn" onclick="speakText('a')">Escucha "A" 🔊</button>
+            <button class="pronunciation-btn" onclick="speakText('an')">Escucha "AN" 🔊</button>
+        </div>
+
+        <div id="writing-ex" class="writing-ex" style="text-align: left; max-width: 500px; margin: 20px auto;">
+            <p>1. <input type="text" id="a1" data-answer="an"> apple</p>
+            <p>2. <input type="text" id="a2" data-answer="a"> book</p>
+            <p>3. <input type="text" id="a3" data-answer="a"> pen</p>
+            <p>4. <input type="text" id="a4" data-answer="an"> orange</p>
+            <p>5. <input type="text" id="a5" data-answer="a"> house</p>
+        </div>
+
+        <button class="btn-primary" onclick="checkArticles()">Verificar Respuestas y Escuchar</button>
+        <div id="article-feedback" class="feedback" style="margin-top: 15px;"></div>
+    </div>
+
+    <script>
+        // Arreglo de frases correctas para la lectura secuencial
+        const correctSentences = [
+            'an apple',
+            'a book',
+            'a pen',
+            'an orange',
+            'a house'
+        ];
+
+        // Función unificada de Síntesis de Voz (TTS)
+        function speakText(text, callback) {
+            // Detener cualquier habla anterior (excepto si es parte de una secuencia)
+            if (!callback) {
+                 window.speechSynthesis.cancel();
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US'; 
+            
+            // Configurar el callback para la lectura secuencial
+            if (callback && utterance.onend === null) {
+                utterance.onend = callback;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+        
+        // Función para reproducir secuencialmente todas las frases correctas
+        function readAllCorrectSentences(index = 0) {
+            // Cancelar cualquier lectura previa que no sea esta secuencia
+            if (index === 0) {
+                 window.speechSynthesis.cancel();
+            }
+            
+            if (index < correctSentences.length) {
+                const sentence = correctSentences[index];
+                
+                // Habla la frase, y llama a la siguiente cuando termine (usando callback)
+                speakText(sentence, () => {
+                    readAllCorrectSentences(index + 1);
+                });
+            } else {
+                // Al finalizar la lectura de todas las frases, permite que otros audios se reproduzcan
+                // limpiando el listener onend del objeto utterance. (Manejo avanzado, no esencial aquí)
+            }
+        }
+
+
+        function checkArticles() {
+            const answers = ['an', 'a', 'a', 'an', 'a'];
+            let correctCount = 0;
+            
+            // 1. Verificar y dar feedback visual
+            answers.forEach((correct, index) => {
+                const input = document.getElementById(`a${index + 1}`);
+                const feedbackDiv = document.getElementById('article-feedback');
+                
+                if (input.value.trim().toLowerCase() === correct) {
+                    input.style.backgroundColor = '#e8f5e9'; // Verde claro (Correcto)
+                    correctCount++;
+                } else {
+                    input.style.backgroundColor = '#ffebee'; // Rojo claro (Incorrecto)
+                }
+            });
+
+            // 2. Mostrar resumen del ejercicio
+            const feedbackDiv = document.getElementById('article-feedback');
+            if (correctCount === answers.length) {
+                feedbackDiv.textContent = '¡Excelente! Todas las respuestas son correctas. ✅ Ahora escucha la pronunciación correcta.';
+                feedbackDiv.style.color = 'var(--color-primary)';
+            } else {
+                feedbackDiv.textContent = `Tienes ${correctCount} de ${answers.length} correctas. Sigue intentando. ❌ Ahora escucha cómo deben sonar las frases.`;
+                feedbackDiv.style.color = 'var(--color-danger)';
+            }
+            
+            // 3. Reproducir TODAS las opciones correctas secuencialmente (según lo solicitado)
+            readAllCorrectSentences();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lección 4: El Verbo To Be | Básico</title>
+    <link rel="stylesheet" href="../../styles/styles.css"> 
+    <style>
+        .tobe-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+        .tobe-table th, .tobe-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        .tobe-table th { background-color: #f0f8ff; color: var(--color-secondary); }
+        .tobe-table td { cursor: pointer; } 
+        
+        .writing-ex p { 
+            margin-bottom: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            max-width: 500px; 
+            margin: 0 auto 10px auto;
+            padding: 5px;
+            cursor: pointer; 
+        }
+        .writing-ex input { width: 70px; padding: 5px; text-align: center; border: 1px solid #ccc; border-radius: 3px;}
+        .dialogue-box { background: #e6f7ff; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: left; }
+        .dialogue-line { display: block; margin-bottom: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" style="display: block; margin-bottom: 20px;">← Volver a Lecciones Básicas</a>
+
+        <h1 style="color: var(--color-primary);">✅ Lección 4: El Verbo "To Be" (Ser o Estar)</h1>
+        <p>Esta es la base de todo. ¡Aprende las conjugaciones y sus usos! Haz clic en las conjugaciones para escuchar.</p>
+
+        <hr>
+
+        <h2>1. Conjugación (Presente Simple) 📖🎧</h2>
+        <table class="tobe-table">
+            <thead>
+                <tr>
+                    <th>Pronombre</th>
+                    <th>"To Be"</th>
+                    <th>Traducción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr onclick="speakText('I am')" style="cursor: pointer;"><td>I</td><td>**am**</td><td>Yo soy / Yo estoy</td></tr>
+                <tr onclick="speakText('You are')" style="cursor: pointer;"><td>You</td><td>**are**</td><td>Tú eres / Tú estás</td></tr>
+                <tr onclick="speakText('He is')" style="cursor: pointer;"><td>He</td><td>**is**</td><td>Él es / Él está</td></tr>
+                <tr onclick="speakText('She is')" style="cursor: pointer;"><td>She</td><td>**is**</td><td>Ella es / Ella está</td></tr>
+                <tr onclick="speakText('It is')" style="cursor: pointer;"><td>It</td><td>**is**</td><td>Éso es / Está</td></tr>
+                <tr onclick="speakText('We are')" style="cursor: pointer;"><td>We</td><td>**are**</td><td>Nosotros somos / Nosotros estamos</td></tr>
+                <tr onclick="speakText('They are')" style="cursor: pointer;"><td>They</td><td>**are**</td><td>Ellos son / Ellos están</td></tr>
+            </tbody>
+        </table>
+
+        <h2>2. Completa la frase 📝</h2>
+        <p style="color: var(--color-light-text); text-align: center; margin-bottom: 20px;">Completa con la conjugación correcta: **am**, **is** o **are**.</p>
+        
+        <div id="writing-ex" class="writing-ex">
+            <p onclick="speakText('I am a good student')" >1. I <input type="text" id="w1" data-answer="am"> a good student.</p>
+            <p onclick="speakText('I am twelve years old')" >2. I <input type="text" id="w2" data-answer="am"> twelve years old.</p>
+
+            <p onclick="speakText('You are my friend')" >3. You <input type="text" id="w3" data-answer="are"> my friend.</p>
+            <p onclick="speakText('You are very tall')" >4. You <input type="text" id="w4" data-answer="are"> very tall.</p>
+
+            <p onclick="speakText('Laura is from Mexico')" >5. Laura <input type="text" id="w5" data-answer="is"> from Mexico. (She)</p>
+            <p onclick="speakText('My mother is happy')" >6. My mother <input type="text" id="w6" data-answer="is"> happy. (She)</p>
+
+            <p onclick="speakText('Marco is a good boy')" >7. Marco <input type="text" id="w7" data-answer="is"> a good boy. (He)</p>
+            <p onclick="speakText('My father is at work')" >8. My father <input type="text" id="w8" data-answer="is"> at work. (He)</p>
+
+            <p onclick="speakText('The weather is cold')" >9. The weather <input type="text" id="w9" data-answer="is"> cold. (It)</p>
+            <p onclick="speakText('The dog is in the house')" >10. The dog <input type="text" id="w10" data-answer="is"> in the house. (It)</p>
+
+            <p onclick="speakText('We are a great team')" >11. We <input type="text" id="w11" data-answer="are"> a great team.</p>
+            <p onclick="speakText('My friends and I are hungry')" >12. My friends and I <input type="text" id="w12" data-answer="are"> hungry. (We)</p>
+            
+            <p onclick="speakText('They are correct')" >13. They <input type="text" id="w13" data-answer="are"> correct.</p>
+            <p onclick="speakText('The books are on the table')" >14. The books <input type="text" id="w14" data-answer="are"> on the table. (They)</p>
+        </div>
+        
+        <div style="text-align: center; max-width: 500px; margin: 0 auto;">
+            <button class="btn-primary" onclick="checkTobe()">Verificar Ejercicios</button>
+            <div id="tobe-feedback" class="feedback" style="margin-top: 15px;"></div>
+        </div>
+        
+        ---
+        
+        <h2>3. Práctica: Preguntas y Respuestas 🗣️🎧</h2>
+        <p style="color: var(--color-light-text);">Haz clic en cada línea para escuchar el diálogo completo.</p>
+        
+        <div class="dialogue-box">
+            <p class="dialogue-line" onclick="speakText('Excuse me, are you Maria?')"><strong>A:</strong> Excuse me, are you Maria?</p>
+            <p class="dialogue-line" onclick="speakText('Yes, I am. And you are?')"><strong>B:</strong> Yes, I am. And you are?</p>
+            <p class="dialogue-line" onclick="speakText('I am John. We are in the same English class.')"><strong>A:</strong> I am John. We are in the same English class.</p>
+            <p class="dialogue-line" onclick="speakText('Oh, that is great! Are you new here?')"><strong>B:</strong> Oh, that is great! Are you new here?</p>
+            <p class="dialogue-line" onclick="speakText('No, I am not. I am from Texas.')"><strong>A:</strong> No, I am not. I am from Texas.</p>
+            <p class="dialogue-line" onclick="speakText('Is your teacher Mr. Smith?')"><strong>B:</strong> Is your teacher Mr. Smith?</p>
+            <p class="dialogue-line" onclick="speakText('Yes, he is. He is very good!')"><strong>A:</strong> Yes, he is. He is very good!</p>
+
+            <button class="btn-primary" onclick="speakText('Excuse me, are you Maria? Yes, I am. And you are? I am John. We are in the same English class. Oh, that is great! Are you new here? No, I am not. I am from Texas. Is your teacher Mr. Smith? Yes, he is. He is very good!')" style="background-color: var(--color-secondary); margin-top: 15px;">Escuchar Diálogo Completo</button>
+        </div>
+
+    </div>
+
+    <script>
+        // Función unificada de Síntesis de Voz
+        function speakText(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US'; 
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function checkTobe() {
+            // 14 Respuestas correctas en orden: am, am, are, are, is, is, is, is, is, is, are, are, are, are
+            const correctAnswers = [
+                'am', 'am',      
+                'are', 'are',   
+                'is', 'is',     
+                'is', 'is',    
+                'is', 'is',     
+                'are', 'are',    
+                'are', 'are'   
+            ];
+            
+            let correctCount = 0;
+            const totalQuestions = correctAnswers.length;
+            
+            // Iterar sobre las 14 preguntas
+            for (let i = 1; i <= totalQuestions; i++) {
+                const input = document.getElementById(`w${i}`);
+                const correct = correctAnswers[i - 1];
+                
+                if (input.value.trim().toLowerCase() === correct) {
+                    input.style.backgroundColor = '#e8f5e9'; // Verde claro
+                    correctCount++;
+                } else {
+                    input.style.backgroundColor = '#ffebee'; // Rojo claro
+                }
+            }
+
+            // Mostrar feedback
+            const feedbackDiv = document.getElementById('tobe-feedback');
+            if (correctCount === totalQuestions) {
+                feedbackDiv.textContent = '¡Felicidades! 14/14 correctas. Dominas el To Be. ✅';
+                feedbackDiv.style.color = 'var(--color-primary)';
+            } else {
+                feedbackDiv.textContent = `Tienes ${correctCount} de ${totalQuestions} correctas. Sigue repasando. ❌`;
+                feedbackDiv.style.color = 'var(--color-danger)';
+            }
+        }
+    </script>
+</body>
+</html>

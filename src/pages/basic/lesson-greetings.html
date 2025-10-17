@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lección 2: Saludos | Básico</title>
+    <link rel="stylesheet" href="../../styles/styles.css"> 
+    <style>
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-top: 5px; }
+        .feedback { margin-top: 10px; font-weight: 600; }
+        .dialogue-text { cursor: pointer; display: block; margin: 5px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" style="display: block; margin-bottom: 20px;">← Volver a Lecciones Básicas</a>
+
+        <h1 style="color: var(--color-primary);">👋 Lección 2: Saludos y Presentaciones Básicas</h1>
+        <p>Aprende a decir "hola", a preguntar cómo está alguien y a presentarte.</p>
+
+        <hr>
+
+        <h2>1. Diálogo - ¡Escucha y Repite! 🗣️</h2>
+        <p style="font-style: italic;">Haz clic en cada línea para escucharla y luego repite en voz alta.</p>
+        <div style="background: #e6f7ff; padding: 15px; border-radius: 8px; margin-bottom: 30px; text-align: left;">
+            <span class="dialogue-text" onclick="speakText('Hello! How are you?')" ><strong>A:</strong> Hello! How are you?</span>
+            <span class="dialogue-text" onclick="speakText('I am fine, thank you. And you?')" ><strong>B:</strong> I'm fine, thank you. And you?</span>
+            <span class="dialogue-text" onclick="speakText('I am good. What is your name?')" ><strong>A:</strong> I'm good. What is your name?</span>
+            <span class="dialogue-text" onclick="speakText('My name is Maria. Nice to meet you!')" ><strong>B:</strong> My name is [Tu nombre]. Nice to meet you!</span>
+            
+            <button class="btn-primary" onclick="speakText('Hello! How are you? I am fine, thank you. And you? I am good. What is your name? My name is Maria. Nice to meet you!')" style="background-color: var(--color-secondary); margin-top: 15px;">Escuchar Diálogo Completo</button>
+        </div>
+
+        <h2>2. Escribe la Palabra Correcta 📝</h2>
+        <div id="writing-exercise">
+            <div class="input-group">
+                <label for="q1">1. Good **(mañana)**: Good ______.</label>
+                <input type="text" id="q1" data-answer="morning">
+                <div id="f1" class="feedback"></div>
+            </div>
+            <div class="input-group">
+                <label for="q2">2. Nice to **(conocer)** you: Nice to ______ you.</label>
+                <input type="text" id="q2" data-answer="meet">
+                <div id="f2" class="feedback"></div>
+            </div>
+            
+            <button class="btn-primary" onclick="checkAnswers()">Verificar Respuestas</button>
+        </div>
+
+    </div>
+
+    <script>
+        function speakText(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US'; 
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function checkAnswers() {
+            const questions = [
+                { id: 'q1', correct: 'morning' },
+                { id: 'q2', correct: 'meet' }
+            ];
+
+            questions.forEach((q, index) => {
+                const input = document.getElementById(q.id);
+                const feedback = document.getElementById(`f${index + 1}`);
+                const userAnswer = input.value.trim().toLowerCase();
+                
+                if (userAnswer === q.correct) {
+                    feedback.textContent = '¡Correcto! ✅';
+                    feedback.style.color = 'var(--color-primary)';
+                } else {
+                    feedback.textContent = `Incorrecto. Intenta con: ${q.correct.toUpperCase()} ❌`;
+                    feedback.style.color = 'var(--color-danger)';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

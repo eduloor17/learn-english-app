@@ -1,0 +1,160 @@
+/* ========================================= */
+/* 1. VARIABLES GLOBALES Y RESET BÁSICO */
+/* ========================================= */
+:root {
+    --color-primary: #4CAF50;    /* Verde (Éxito, Go) */
+    --color-secondary: #2196F3; /* Azul (Información, Enlaces) */
+    --color-warning: #FFC107;   /* Amarillo (Intermedio) */
+    --color-danger: #F44336;    /* Rojo (Avanzado, Error) */
+    --color-text: #333;
+    --color-light-text: #666;
+    --color-bg: #f4f4f9;
+    --color-white: #fff;
+    --font-stack: 'Poppins', sans-serif;
+}
+
+/* Reset y estilos generales */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-stack);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+/* Contenedor principal de la página */
+.container {
+    max-width: 900px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: var(--color-white);
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+    color: var(--color-primary);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+a {
+    text-decoration: none;
+    color: var(--color-secondary);
+}
+
+/* ========================================= */
+/* 2. ESTILOS DE LA PÁGINA DE INICIO (Level Selector) */
+/* ========================================= */
+
+.homepage-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.level-selector {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+.level-card {
+    background-color: var(--color-white);
+    border: 2px solid; /* El color del borde se definirá por clase de nivel */
+    border-radius: 10px;
+    padding: 30px;
+    width: 250px;
+    min-height: 250px;
+    text-align: center;
+    color: var(--color-text);
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+}
+
+.level-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Clases específicas de color para cada nivel */
+.level-card.basic { 
+    border-color: var(--color-primary); 
+}
+.level-card.basic h2 { 
+    color: var(--color-primary); 
+}
+
+.level-card.intermediate { 
+    border-color: var(--color-warning); 
+}
+.level-card.intermediate h2 { 
+    color: var(--color-warning); 
+}
+
+.level-card.advanced { 
+    border-color: var(--color-danger); 
+}
+.level-card.advanced h2 { 
+    color: var(--color-danger); 
+}
+
+.level-card p {
+    font-size: 0.9em;
+    margin-bottom: 0;
+    color: var(--color-light-text);
+}
+
+
+/* ========================================= */
+/* 3. ESTILOS REUTILIZABLES (Botones, Módulos) */
+/* ========================================= */
+
+/* Botón principal (para comenzar lecciones, enviar respuesta) */
+.btn-primary {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-top: 20px;
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #388e3c; /* Tono más oscuro de verde */
+}
+
+/* Estilo para los módulos o lecciones dentro de un nivel (ej. en pages/basic/index.html) */
+.module-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.module-item a {
+    display: block;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-left: 5px solid var(--color-secondary);
+    border-radius: 5px;
+    text-align: left;
+    font-weight: 600;
+    transition: background-color 0.2s, border-left-color 0.2s;
+}
+
+.module-item a:hover {
+    background-color: #e8f5e9; /* Tono muy claro de verde para hover */
+    border-left-color: var(--color-primary);
+}

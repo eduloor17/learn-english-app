@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lección 5: La Familia | Básico</title>
+    <link rel="stylesheet" href="../../styles/styles.css"> 
+    <style>
+        .vocab-item { padding: 10px; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
+        .family-tree { 
+            background-color: #fffaf0; 
+            padding: 20px; 
+            border: 1px solid #ffcc80; 
+            border-radius: 10px; 
+            text-align: left;
+        }
+        .example-sentence {
+            background-color: #f7f7f7;
+            padding: 8px;
+            border-left: 3px solid var(--color-secondary);
+            margin: 10px 0;
+            font-style: italic;
+            cursor: pointer;
+        }
+        .subject-tag {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 150px; /* Asegura alineación */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" style="display: block; margin-bottom: 20px;">← Volver a Lecciones Básicas</a>
+
+        <h1 style="color: var(--color-primary);">👨‍👩‍👧‍👦 Lección 5: Mi Familia y Pronombres Posesivos</h1>
+        <p>Aprende el vocabulario para describir a tu familia. ¡Pulsa el botón 🔊 para escuchar la palabra!</p>
+
+        <hr>
+
+        <h2>1. Vocabulario Familiar - ¡Escucha! 🎧</h2>
+        <div style="max-width: 400px; margin: 0 auto; text-align: left;">
+            <div class="vocab-item">
+                <span>**Mother / Mom** (Madre)</span>
+                <button onclick="speakText('Mother')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Father / Dad** (Padre)</span>
+                <button onclick="speakText('Father')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Brother** (Hermano)</span>
+                <button onclick="speakText('Brother')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Sister** (Hermana)</span>
+                <button onclick="speakText('Sister')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Step-Sister** (Hermanastra)</span>
+                <button onclick="speakText('Step-Sister')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Step-Brother** (Hermanastro)</span>
+                <button onclick="speakText('Step-Brother')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Aunt** (Tía)</span>
+                <button onclick="speakText('Aunt')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+             <div class="vocab-item">
+                <span>**Uncle** (Tío)</span>
+                <button onclick="speakText('Uncle')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Grandfather** (Abuelo)</span>
+                <button onclick="speakText('Grandfather')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Grandmother** (Abuela)</span>
+                <button onclick="speakText('Grandmother')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Sister-in-law** (Cuñada)</span>
+                <button onclick="speakText('Sister-in-law')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Brother-in-law** (Cuñado)</span>
+                <button onclick="speakText('Brother-in-law')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Mother-in-law** (Suegra)</span>
+                <button onclick="speakText('Mother-in-law')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+            <div class="vocab-item">
+                <span>**Father-in-law** (Suegro)</span>
+                <button onclick="speakText('Father-in-law')" class="btn-primary" style="padding: 5px 10px;">🔊</button>
+            </div>
+        </div>
+        
+        <hr style="margin-top: 30px;">
+
+        <h2>2. Árbol Familiar y Pronombres Posesivos 📖🎧</h2>
+        <p style="color: var(--color-light-text);">Usamos **HIS** (Su de él), **HER** (Su de ella), **THEIR** (Su de ellos/as) o **'s** para indicar posesión.</p>
+        <div class="family-tree">
+            <h3>La Familia López-Loor 🌳</h3>
+            
+            <p style="font-weight: bold;">Miembros Principales:</p>
+            <p><strong>Arturo</strong> (Father) & <strong>Ana</strong> (Mother)</p>
+            <p>Children: <strong>Luciano</strong> (Son) and <strong>Mathias</strong> (Son)</p>
+            
+            <p style="margin-top: 10px; font-weight: bold;">Otros Familiares:</p>
+            <p>Lucciana (Arturo's daughter), Julian (Arturo's son)</p>
+            <p>Eduardo (Ana's brother), Olga (Arturo's sister)</p>
+            <p>Grandparents: **Efrain** (Arturo's father), **Jenny** (Arturo's mother), **Vicente** (Ana's father), **Ana Teresa** (Ana's mother)</p>
+            
+            <p style="margin-top: 15px; font-weight: bold; color: var(--color-secondary);">¡Practiquemos la Posesión!</p>
+            
+            <div class="example-sentence" onclick="speakText('Lucciana is their step-sister.')">
+                <span class="subject-tag">Luciano & Mathias:</span> Lucciana is **their** step-sister. (Su hermanastra de ellos)
+            </div>
+            <div class="example-sentence" onclick="speakText('Julian is their step-brother.')">
+                <span class="subject-tag">Luciano & Mathias:</span> Julian is **their** step-brother. (Su hermanastro de ellos)
+            </div>
+            <div class="example-sentence" onclick="speakText('Jenny is their grandmother.')">
+                <span class="subject-tag">Luciano & Mathias:</span> Jenny is **their** grandmother. (Abuela de ellos - vía Arturo)
+            </div>
+            <div class="example-sentence" onclick="speakText('Vicente is their grandfather.')">
+                <span class="subject-tag">Luciano & Mathias:</span> Vicente is **their** grandfather. (Abuelo de ellos - vía Ana)
+            </div>
+
+            <div class="example-sentence" onclick="speakText('Olga is his sister.')">
+                <span class="subject-tag">Arturo:</span> Olga is **his** sister. (La hermana de él - Arturo)
+            </div>
+            <div class="example-sentence" onclick="speakText('Eduardo is her brother.')">
+                <span class="subject-tag">Ana:</span> Eduardo is **her** brother. (El hermano de ella - Ana)
+            </div>
+            <div class="example-sentence" onclick="speakText('Jenny is his mother.')">
+                <span class="subject-tag">Arturo:</span> Jenny is **his** mother. (La madre de él - Arturo)
+            </div>
+            <div class="example-sentence" onclick="speakText('Ana Teresa is her mother.')">
+                <span class="subject-tag">Ana:</span> Ana Teresa is **her** mother. (La madre de ella - Ana)
+            </div>
+            <div class="example-sentence" onclick="speakText('Efrain is her father-in-law.')">
+                <span class="subject-tag">Ana:</span> Efrain is **her** father-in-law. (El suegro de ella - Ana)
+            </div>
+            <div class="example-sentence" onclick="speakText('Vicente is his father-in-law.')">
+                <span class="subject-tag">Arturo:</span> Vicente is **his** father-in-law. (El suegro de él - Arturo)
+            </div>
+            <div class="example-sentence" onclick="speakText('Olga is her sister-in-law.')">
+                <span class="subject-tag">Ana:</span> Olga is **her** sister-in-law. (La cuñada de ella - Ana)
+            </div>
+            <div class="example-sentence" onclick="speakText('Julian is his son.')">
+                <span class="subject-tag">Arturo:</span> Julian is **his** son. (El hijo de él - Arturo)
+            </div>
+            
+        </div>
+
+    </div>
+
+    <script>
+        function speakText(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US'; 
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</body>
+</html>

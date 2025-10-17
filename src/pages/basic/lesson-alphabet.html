@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lección 1: El Alfabeto y Números | Básico</title>
+    <link rel="stylesheet" href="../../styles/styles.css"> 
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" style="display: block; margin-bottom: 20px;">← Volver a Lecciones Básicas</a>
+
+        <h1 style="color: var(--color-primary);">⭐ Lección 1: El Alfabeto (ABC) y Números 1-20</h1>
+        <p>Aprende cómo suenan las letras y los números básicos. ¡Pulsa el botón o la palabra para escuchar!</p>
+
+        <hr>
+
+        <h2>1. El Alfabeto - ¡Escucha y Repite! 🎧</h2>
+        <div id="alphabet-grid" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 30px;">
+            </div>
+        
+        <h2>2. Los Números (1-20) 🔢</h2>
+        <div id="numbers-list" style="text-align: left; max-width: 400px; margin: 0 auto; line-height: 2.5;">
+            <p><span onclick="speakText('One')" style="cursor: pointer; font-weight: bold;">1 - One</span> | <span onclick="speakText('Six')" style="cursor: pointer; font-weight: bold;">6 - Six</span> | <span onclick="speakText('Eleven')" style="cursor: pointer; font-weight: bold;">11 - Eleven</span> | <span onclick="speakText('Sixteen')" style="cursor: pointer; font-weight: bold;">16 - Sixteen</span></p>
+            <p><span onclick="speakText('Two')" style="cursor: pointer; font-weight: bold;">2 - Two</span> | <span onclick="speakText('Seven')" style="cursor: pointer; font-weight: bold;">7 - Seven</span> | <span onclick="speakText('Twelve')" style="cursor: pointer; font-weight: bold;">12 - Twelve</span> | <span onclick="speakText('Seventeen')" style="cursor: pointer; font-weight: bold;">17 - Seventeen</span></p>
+            <p><span onclick="speakText('Three')" style="cursor: pointer; font-weight: bold;">3 - Three</span> | <span onclick="speakText('Eight')" style="cursor: pointer; font-weight: bold;">8 - Eight</span> | <span onclick="speakText('Thirteen')" style="cursor: pointer; font-weight: bold;">13 - Thirteen</span> | <span onclick="speakText('Eighteen')" style="cursor: pointer; font-weight: bold;">18 - Eighteen</span></p>
+            <p><span onclick="speakText('Four')" style="cursor: pointer; font-weight: bold;">4 - Four</span> | <span onclick="speakText('Nine')" style="cursor: pointer; font-weight: bold;">9 - Nine</span> | <span onclick="speakText('Fourteen')" style="cursor: pointer; font-weight: bold;">14 - Fourteen</span> | <span onclick="speakText('Nineteen')" style="cursor: pointer; font-weight: bold;">19 - Nineteen</span></p>
+            <p><span onclick="speakText('Five')" style="cursor: pointer; font-weight: bold;">5 - Five</span> | <span onclick="speakText('Ten')" style="cursor: pointer; font-weight: bold;">10 - Ten</span> | <span onclick="speakText('Fifteen')" style="cursor: pointer; font-weight: bold;">15 - Fifteen</span> | <span onclick="speakText('Twenty')" style="cursor: pointer; font-weight: bold;">20 - Twenty</span></p>
+        </div>
+
+    </div>
+
+    <script>
+        // Función unificada de Síntesis de Voz
+        function speakText(text) {
+            window.speechSynthesis.cancel();
+            
+            // Si el texto es una sola letra (A-Z), la modificamos para que se lea correctamente.
+            // Si el texto tiene un espacio (ej: 'One'), se leerá como palabra.
+            let textToSpeak = text;
+            if (text.length === 1 && text.match(/[A-Z]/i)) {
+                // Truco: Al añadir un punto después de cada letra, algunos motores de TTS
+                // lo leen como si estuviera deletreando, diciendo solo el nombre de la letra.
+                textToSpeak = text + '.'; 
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'en-US'; 
+            utterance.pitch = 1; 
+            utterance.rate = 1; 
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+        const alphabetGrid = document.getElementById('alphabet-grid');
+
+        letters.forEach(letter => {
+            const button = document.createElement('button');
+            button.className = 'btn-primary';
+            button.style.backgroundColor = 'var(--color-secondary)';
+            button.style.width = '100%';
+            button.textContent = letter; 
+            // Llama a la función, que internamente agregará el punto si es necesario.
+            button.onclick = () => speakText(letter); 
+            alphabetGrid.appendChild(button);
+        });
+    </script>
+</body>
+</html>
