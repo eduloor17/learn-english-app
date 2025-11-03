@@ -25,6 +25,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         
+        /* Light Theme is default: bg-gray-100 body, bg-white card */
         .card {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
@@ -146,10 +147,10 @@
         // --- API & Utility Setup ---
         const API_KEY = ""; // Intentionally empty, expected to be injected by runtime environment.
         
-        // **DEBUG FLAG: SET TO FALSE TO CALL THE REAL API (LLM and TTS)**
-        const USE_MOCK_DATA = false; 
+        // **DEBUG FLAG: SET BACK TO TRUE TO AVOID 403 PERMISSION ERRORS**
+        const USE_MOCK_DATA = true; 
 
-        // Models and Endpoints
+        // Models and Endpoints (used only if USE_MOCK_DATA is false)
         const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
         const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
         const LLM_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
@@ -228,6 +229,10 @@
                     sttStatus.textContent = "Phrase captured. Click 'Correct & Speak'.";
                 } else {
                     sttStatus.textContent = "No speech detected. Click the mic to try again.";
+                    // Reset placeholder text
+                    recognizedTextDisplay.textContent = 'Click the **Start Recording** button below to begin speaking.';
+                    recognizedTextDisplay.classList.remove('text-gray-800', 'font-medium');
+                    recognizedTextDisplay.classList.add('italic', 'text-gray-500');
                     setAppState('idle');
                 }
             };
@@ -280,10 +285,7 @@
             // Reset status text visibility for Speak mode
             if (inputMode === 'speak') {
                 sttStatus.textContent = '';
-            } else {
-                 // For type mode, clear the recognized text display for cleanliness
-                 recognizedTextDisplay.textContent = 'Click the **Start Recording** button below to begin speaking.';
-            }
+            } 
 
             switch (appState) {
                 case 'idle':
@@ -366,7 +368,7 @@
             }
         }
 
-        // --- Exponential Backoff Fetch Wrapper (Unchanged) ---
+        // --- Exponential Backoff Fetch Wrapper (Only used if USE_MOCK_DATA is false) ---
         async function fetchWithRetry(url, options, maxRetries = 5) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
@@ -374,17 +376,14 @@
                     if (response.ok) {
                         return response;
                     }
-                    // Capture detailed error information for debugging
                     const errorDetails = await response.text();
                     console.error(`Attempt ${i + 1} failed. Status: ${response.status}. URL: ${url}. Details:`, errorDetails);
                     
                     if (response.status === 403) {
-                         // Critical Auth Error
                          const service = url.includes(LLM_MODEL) ? 'Language Model (LLM)' : 'Text-to-Speech (TTS)';
                         throw new Error(`Authorization Failed (403 Forbidden). The request to the ${service} API was denied. This is an environment configuration issue, meaning the provided API Key is invalid or missing required permissions.`);
                     }
                     if (response.status === 429 && i < maxRetries - 1) {
-                        // Rate limit exceeded (429), wait and retry
                         const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
                         await new Promise(resolve => setTimeout(resolve, delay));
                         continue;
@@ -401,7 +400,7 @@
             throw new Error("Exceeded maximum retries.");
         }
 
-        // --- Audio Utility Functions (Unchanged) ---
+        // --- Audio Utility Functions (Only used if USE_MOCK_DATA is false) ---
         function base64ToArrayBuffer(base64) {
             const binaryString = atob(base64);
             const len = binaryString.length;
@@ -455,6 +454,17 @@
         }
         
         function playAudio() {
+            if (USE_MOCK_DATA) {
+                // MOCK MODE: Skip audio, but simulate success visual state
+                console.log("Mock Audio Playback: Skipping actual sound synthesis. The UI is behaving as if audio is playing.");
+                playButton.disabled = true;
+                setTimeout(() => {
+                    playButton.disabled = false;
+                }, 1500); // Simulate 1.5 second playback
+                return;
+            }
+            
+            // REAL API MODE
             if (ttsAudio.src) {
                 ttsAudio.play();
                 playButton.disabled = true;
@@ -472,7 +482,7 @@
         // --- Main Application Logic ---
 
         async function correctAndSynthesize(userText) {
-            if (!userText || (inputMode === 'speak' && appState !== 'ready_to_correct') || appState === 'processing') {
+            if (!userText || (inputMode === 'speak' && appState !== 'ready_to_correct') && inputMode === 'speak' || appState === 'processing') {
                 return;
             }
             
@@ -513,10 +523,11 @@
                     correctedPhraseDisplay.textContent = correctedText;
                     explanationDisplay.textContent = mockData.explanation;
                     resultsContainer.classList.remove('hidden');
-                    playButton.disabled = true; 
+                    playButton.disabled = false; // Enable play button even in mock mode
 
-                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls bypassed using MOCK data. Set 'USE_MOCK_DATA' to false to attempt real API call.)";
+                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls bypassed using MOCK data.)";
                     errorFeedback.classList.remove('hidden');
+                    
                     setAppState('idle');
                     return; 
                     // --- END MOCK DATA SIMULATION ---
@@ -613,12 +624,10 @@
 
             } catch (error) {
                 console.error("An error occurred during API process:", error);
-                // Display the specific error message provided by the retry wrapper
-                errorFeedback.textContent = `CRITICAL ERROR: ${error.message}`;
+                errorFeedback.textContent = `CRITICAL ERROR (API Disabled): ${error.message}. Please use MOCK data mode for now.`;
                 errorFeedback.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
             } finally {
-                // Ensure state is reset back to idle after processing (or error)
                 setAppState('idle');
             }
         }
@@ -626,6 +635,10 @@
         // Initialize mode and state on load
         window.onload = () => {
              setInputMode('speak');
+             if (USE_MOCK_DATA) {
+                 errorFeedback.textContent = "ATTENTION: Running in MOCK DATA mode to bypass API permission errors. Results and audio playback are simulated, but the UI is fully functional.";
+                 errorFeedback.classList.remove('hidden');
+             }
         };
     </script>
 </body>
