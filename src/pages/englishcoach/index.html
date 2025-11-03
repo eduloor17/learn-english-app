@@ -502,12 +502,13 @@
 
                     if (lowerText.includes('book at the desk')) {
                         mockCorrection = "The book is on the desk, right?";
-                        mockExplanation = "The structure 'There is a book at the desk, isn't there?' is grammatically sound but slightly clunky. Native speakers prefer the direct statement and a simple tag question, often using a less formal phrase like '**right?**' instead of 'isn't there?' to confirm common knowledge.";
+                        mockExplanation = "The structure 'There is a book at the desk, isn't there?' is grammatically sound but slightly clunky. Native speakers prefer the direct statement and a simple tag question, often using a less formal phrase like '**right?**' instead of 'isn't there?' to confirm common knowledge. We also typically use the preposition **'on'** the desk for objects resting on a surface.";
                     } else if (lowerText.includes('ecuador')) {
                         mockCorrection = "I am from Ecuador.";
                         mockExplanation = "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural.";
                     } else if (userText.length > 20) {
                         mockCorrection = "That's a very long sentence! Try simplifying it to: 'I'd like to learn more about that topic.'";
+                        mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
                     }
 
                     const mockData = {
