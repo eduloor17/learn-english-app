@@ -499,19 +499,24 @@
                     
                     const lowerText = userText.toLowerCase().trim();
 
-                    let mockCorrection = "That's a very formal way to say it! Try, 'I'd like to learn more.'";
+                    let mockCorrection = "That's a very wordy sentence! Try simplifying it to: 'I'd like to learn more about that topic.'";
                     let mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
 
                     if (lowerText.includes("dont heard") || lowerText.includes("don't heard")) {
                         mockCorrection = "I didn't hear you.";
                         mockExplanation = "The mistake is mixing the present tense auxiliary verb ('don't') with the past tense or past participle ('heard'). To form the simple past negative, you must use the past tense auxiliary ('didn't') followed by the base form of the verb ('hear').";
                     } else if (lowerText.includes('book on the desk') && lowerText.includes('isn\'t there')) {
+                        // Singular subject check
                         mockCorrection = "The book is on the desk, right?";
-                        mockExplanation = "The structure 'There is a book on the desk, isn't there?' is grammatically sound but slightly clunky and overly formal. Native speakers prefer a simple statement followed by an informal tag like '**right?**' to confirm common knowledge. The corrected phrase is much more natural for everyday use.";
+                        mockExplanation = "The structure is grammatically sound but formal. Native speakers prefer the direct statement and a simple tag question, often using a less formal phrase like '**right?**' instead of 'isn't there?'";
+                    } else if (lowerText.includes('books') && lowerText.includes('aren\'t there')) {
+                         // Plural subject check (the user's latest test)
+                        mockCorrection = "There are books on the desk, right?";
+                        mockExplanation = "Your primary error is **Subject-Verb Agreement** ('There is a books'). Since 'books' is plural, it requires the plural verb 'There **are** books'. We also replaced the formal 'aren't there?' with the more casual, native-sounding tag '**right?**'";
                     } else if (lowerText.includes('ecuador')) {
                         mockCorrection = "I am from Ecuador.";
                         mockExplanation = "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural.";
-                    } else if (userText.length > 30 && !lowerText.includes('ecuador')) { // A little more permissive on length to avoid false positives
+                    } else if (userText.length > 30 && !lowerText.includes('ecuador')) { 
                         mockCorrection = "That's a very wordy sentence! Try simplifying it. For example, 'I need to find the main point.'";
                         mockExplanation = "While grammatically correct, native speech often favors conciseness. Long, drawn-out sentences can make your speech sound stiff. Simplifying structures usually helps.";
                     }
@@ -641,7 +646,7 @@
         // Initialize mode and state on load
         window.onload = () => {
              // Set the new phrase for testing the fix
-             typedInput.value = "There is a book on the desk, isn't there?";
+             typedInput.value = "There is a books at the desk, aren't there?";
              // Start in Type mode for immediate use
              setInputMode('type'); 
              if (USE_MOCK_DATA) {
