@@ -67,39 +67,41 @@
             <textarea id="englishInput" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition duration-150" placeholder="e.g., I desire to have more knowledge."></textarea>
         </div>
 
-        <!-- Recording Controls (New Feature) -->
+        <!-- Recording Controls (Mobile Friendly Touch Targets) -->
         <div class="mb-6 border-t pt-4">
-            <p class="text-sm font-semibold text-gray-700 mb-2">1. Practice & Compare (Optional):</p>
+            <p class="text-sm font-semibold text-gray-700 mb-2">1. Practice & Compare (Optional - Requires Mic Access):</p>
             <div class="flex space-x-2">
-                <button id="recordButton" onclick="startRecording()" class="flex-1 flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-red-500 hover:bg-red-600 transition disabled:opacity-50">
+                <!-- Increased padding and text size for better touch target -->
+                <button id="recordButton" onclick="startRecording()" class="flex-1 flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-red-500 hover:bg-red-600 transition disabled:opacity-50">
                     <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
                     Record
                 </button>
-                <button id="stopButton" onclick="stopRecording()" class="flex-1 flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-500 hover:bg-gray-600 transition disabled:opacity-50" disabled>
+                <button id="stopButton" onclick="stopRecording()" class="flex-1 flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-gray-500 hover:bg-gray-600 transition disabled:opacity-50" disabled>
                     <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M5 4a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V5a1 1 0 00-1-1H5z"/></svg>
                     Stop
                 </button>
-                <button id="playUserButton" onclick="playUserAudio()" class="flex-1 flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-secondary hover:bg-teal-600 transition disabled:opacity-50" disabled>
+                <button id="playUserButton" onclick="playUserAudio()" class="flex-1 flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-secondary hover:bg-teal-600 transition disabled:opacity-50" disabled>
                     <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
                     </svg>
                     Play Yours
                 </button>
             </div>
-            <p id="recordStatus" class="mt-2 text-xs text-red-500 font-medium hidden">🔴 Recording in progress... Click Stop when finished.</p>
-            <p id="userAudioFeedback" class="mt-2 text-xs text-gray-500 hidden"></p>
+            <p id="recordStatus" class="mt-2 text-sm text-red-500 font-bold hidden">🔴 Recording in progress... Click Stop when finished.</p>
+            <p id="userAudioFeedback" class="mt-2 text-sm text-gray-500 hidden"></p>
         </div>
 
 
         <!-- Action Button -->
         <div class="mb-8">
             <p class="text-sm font-semibold text-gray-700 mb-2">2. Get AI Correction & Native Audio:</p>
-            <!-- Removed inline onclick and added an ID for the listener in JS -->
-            <button id="submitButton" class="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50" disabled>
+            <!-- Submit button remains large and prominent -->
+            <button id="submitButton" class="w-full flex items-center justify-center px-6 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50" disabled>
                 <span id="buttonText">Correct & Speak</span>
                 <div id="loadingSpinner" class="spinner ml-3 hidden"></div>
             </button>
-            <p id="errorFeedback" class="text-red-500 mt-2 text-sm hidden"></p>
+            <!-- Error feedback is clearly visible -->
+            <p id="errorFeedback" class="text-red-600 mt-2 text-base font-semibold hidden border-2 border-red-300 p-2 rounded-lg bg-red-100"></p>
         </div>
 
         <!-- Results Display Section -->
@@ -115,8 +117,9 @@
             <div class="bg-green-50 p-4 rounded-lg border-l-4 border-secondary">
                 <div class="flex items-center justify-between">
                     <p class="text-xs font-semibold uppercase text-secondary">Native Correction (AI)</p>
-                    <button id="playButton" onclick="playAudio()" class="p-2 rounded-full bg-secondary text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50 shadow-lg" disabled>
-                        <svg id="playIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Play button is a good touch target size -->
+                    <button id="playButton" onclick="playAudio()" class="p-3 rounded-full bg-secondary text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-secondary disabled:opacity-50 shadow-lg" disabled>
+                        <svg id="playIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
                         </svg>
                     </button>
@@ -190,6 +193,7 @@
             playUserButton.disabled = true;
             resultsContainer.classList.add('hidden');
             userAudioFeedback.classList.add('hidden');
+            errorFeedback.classList.add('hidden'); // Also hide general error on cleanup
         }
 
         // --- Event Listeners ---
@@ -197,7 +201,7 @@
         englishInput.addEventListener('input', () => {
             const isEmpty = englishInput.value.trim().length === 0;
             submitButton.disabled = isEmpty;
-            // New: Clean up audio when input is cleared
+            // Clean up audio when input is cleared
             if (isEmpty) {
                 cleanupAudioResources();
             }
@@ -341,12 +345,17 @@
 
         // --- Recording Logic (onclick retained here for simplicity) ---
         async function startRecording() {
+            // Mobile compatibility: Disable button immediately to prevent double-tap issues
+            recordButton.disabled = true;
+            stopButton.disabled = false;
+            userAudioFeedback.classList.add('hidden');
+            errorFeedback.classList.add('hidden');
+            
             try {
                 // Clear previous recording URL
                 if (userAudioBlobUrl) { URL.revokeObjectURL(userAudioBlobUrl); }
                 userAudio.src = '';
                 playUserButton.disabled = true;
-                userAudioFeedback.classList.add('hidden');
                 
                 // Request microphone access
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -378,19 +387,22 @@
                 mediaRecorder.start();
                 
                 // Update UI state
-                recordButton.disabled = true;
-                stopButton.disabled = false;
                 recordButton.classList.add('recording-active');
                 recordStatus.classList.remove('hidden');
-                userAudioFeedback.classList.add('hidden');
                 
             } catch (err) {
                 console.error("Microphone access error:", err);
-                errorFeedback.textContent = "Error accessing microphone. Please ensure permissions are granted.";
+                let message = "Error accessing microphone. Please ensure permissions are granted in your device settings.";
+                if (err.name === 'NotAllowedError') {
+                    message = "Microphone access blocked. Please check your browser or device permissions.";
+                }
+                errorFeedback.textContent = message;
                 errorFeedback.classList.remove('hidden');
                 // Reset button state
                 recordButton.disabled = false;
                 stopButton.disabled = true;
+                recordButton.classList.remove('recording-active');
+                recordStatus.classList.add('hidden');
             }
         }
 
@@ -525,7 +537,7 @@
 
             } catch (error) {
                 console.error("An error occurred during API process:", error);
-                errorFeedback.textContent = `Error: ${error.message}. Please try again.`;
+                errorFeedback.textContent = `API Error: The language model could not be reached. (Check key/permissions: ${error.message})`;
                 errorFeedback.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
             } finally {
