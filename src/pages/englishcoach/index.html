@@ -94,7 +94,8 @@
         <!-- Action Button -->
         <div class="mb-8">
             <p class="text-sm font-semibold text-gray-700 mb-2">2. Get AI Correction & Native Audio:</p>
-            <button id="submitButton" onclick="correctAndSynthesize()" class="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50" disabled>
+            <!-- Removed inline onclick and added an ID for the listener in JS -->
+            <button id="submitButton" class="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50" disabled>
                 <span id="buttonText">Correct & Speak</span>
                 <div id="loadingSpinner" class="spinner ml-3 hidden"></div>
             </button>
@@ -172,10 +173,27 @@
         let mediaRecorder = null;
         let audioChunks = [];
 
-        // Enable button when input is not empty
+        // --- Event Listeners (The improvement you requested) ---
+        // 1. Enable/Disable Submit button based on input
         englishInput.addEventListener('input', () => {
             submitButton.disabled = englishInput.value.trim().length === 0;
         });
+
+        // 2. Listen for 'Correct & Speak' button click
+        submitButton.addEventListener('click', correctAndSynthesize);
+
+        // 3. Listen for 'Enter' key press on the textarea to submit
+        englishInput.addEventListener('keypress', (e) => {
+            // Check if Enter key (keyCode 13 or key 'Enter') is pressed and Shift key is NOT held (for new line)
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent default new line behavior
+                if (!submitButton.disabled) {
+                    correctAndSynthesize();
+                }
+            }
+        });
+        // --- End Event Listeners ---
+
 
         // --- Exponential Backoff Fetch Wrapper ---
         async function fetchWithRetry(url, options, maxRetries = 5) {
@@ -263,7 +281,7 @@
             return new Blob([buffer], { type: 'audio/wav' });
         }
         
-        // Plays the TTS audio
+        // Plays the TTS audio (onclick retained here for simplicity)
         function playAudio() {
             if (ttsAudio.src) {
                 ttsAudio.play();
@@ -280,7 +298,7 @@
             }
         }
 
-        // Plays the user's recorded audio
+        // Plays the user's recorded audio (onclick retained here for simplicity)
         function playUserAudio() {
             if (userAudio.src) {
                 userAudio.play();
@@ -297,7 +315,7 @@
             }
         }
 
-        // --- Recording Logic ---
+        // --- Recording Logic (onclick retained here for simplicity) ---
         async function startRecording() {
             try {
                 // Clear previous recording URL
