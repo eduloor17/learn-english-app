@@ -173,10 +173,34 @@
         let mediaRecorder = null;
         let audioChunks = [];
 
-        // --- Event Listeners (The improvement you requested) ---
+        // --- Audio Cleanup Function ---
+        function cleanupAudioResources() {
+            // Revoke temporary URLs to free up browser memory
+            if (audioBlobUrl) {
+                URL.revokeObjectURL(audioBlobUrl);
+                audioBlobUrl = null;
+                ttsAudio.src = '';
+            }
+            if (userAudioBlobUrl) {
+                URL.revokeObjectURL(userAudioBlobUrl);
+                userAudioBlobUrl = null;
+                userAudio.src = '';
+            }
+            playButton.disabled = true;
+            playUserButton.disabled = true;
+            resultsContainer.classList.add('hidden');
+            userAudioFeedback.classList.add('hidden');
+        }
+
+        // --- Event Listeners ---
         // 1. Enable/Disable Submit button based on input
         englishInput.addEventListener('input', () => {
-            submitButton.disabled = englishInput.value.trim().length === 0;
+            const isEmpty = englishInput.value.trim().length === 0;
+            submitButton.disabled = isEmpty;
+            // New: Clean up audio when input is cleared
+            if (isEmpty) {
+                cleanupAudioResources();
+            }
         });
 
         // 2. Listen for 'Correct & Speak' button click
@@ -392,8 +416,10 @@
             submitButton.disabled = true;
             buttonText.textContent = 'Processing...';
             loadingSpinner.classList.remove('hidden');
-            playButton.disabled = true;
+            
+            // Clean up the previous TTS audio before starting a new request
             if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); }
+            playButton.disabled = true;
 
             let correctedText;
 
