@@ -25,7 +25,7 @@
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        @import url('https://fonts.fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         
         .card {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -141,7 +141,9 @@
 
     <script>
         // --- API & Utility Setup ---
-        const API_KEY = ""; // Kept empty, provided by the runtime environment
+        // NOTE: API_KEY is intentionally empty here. It is provided by the runtime environment. 
+        // If you see a 403 error, the key being provided externally is likely invalid or missing necessary permissions.
+        const API_KEY = ""; 
         
         // Models and Endpoints
         const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
@@ -230,6 +232,14 @@
                     const response = await fetch(url, options);
                     if (response.ok) {
                         return response;
+                    }
+                    // Capture detailed error information for debugging
+                    const errorDetails = await response.text();
+                    console.error(`Attempt ${i + 1} failed. Status: ${response.status}. Details:`, errorDetails);
+                    
+                    if (response.status === 403) {
+                         // Critical Auth Error
+                        throw new Error(`Authorization Failed (403 Forbidden). This usually means the API key is missing, invalid, or lacks required permissions for ${url.includes(LLM_MODEL) ? 'LLM' : 'TTS'} access.`);
                     }
                     if (response.status === 429 && i < maxRetries - 1) {
                         // Rate limit exceeded (429), wait and retry
@@ -392,9 +402,9 @@
                 
             } catch (err) {
                 console.error("Microphone access error:", err);
-                let message = "Error accessing microphone. Please ensure permissions are granted in your device settings.";
+                let message = "Microphone access blocked. Please check your browser or device permissions.";
                 if (err.name === 'NotAllowedError') {
-                    message = "Microphone access blocked. Please check your browser or device permissions.";
+                    message = "Microphone access blocked. You must allow microphone access to record.";
                 }
                 errorFeedback.textContent = message;
                 errorFeedback.classList.remove('hidden');
@@ -474,7 +484,7 @@
                 
                 const jsonText = llmResult.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonText) {
-                    throw new Error("Failed to get structured correction from AI.");
+                    throw new Error("Failed to get structured correction from AI. Check the browser console for possible JSON parsing errors.");
                 }
                 
                 const parsedJson = JSON.parse(jsonText);
@@ -516,7 +526,7 @@
                 const mimeType = audioPart?.inlineData?.mimeType;
 
                 if (!audioData || !mimeType || !mimeType.startsWith("audio/L16")) {
-                    throw new Error("Failed to receive valid audio data from TTS model.");
+                    throw new Error("Failed to receive valid audio data from TTS model. This may also be an API key/permission issue.");
                 }
                 
                 // Extract sample rate from mimeType (e.g., audio/L16;rate=24000)
@@ -537,7 +547,8 @@
 
             } catch (error) {
                 console.error("An error occurred during API process:", error);
-                errorFeedback.textContent = `API Error: The language model could not be reached. (Check key/permissions: ${error.message})`;
+                // Display the specific error message provided by the retry wrapper
+                errorFeedback.textContent = `CRITICAL ERROR: ${error.message}`;
                 errorFeedback.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
             } finally {
