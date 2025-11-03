@@ -43,24 +43,44 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .animate-pulse-mic {
+            animation: pulse-mic 1.5s infinite;
+        }
+        @keyframes pulse-mic {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.05);
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4 font-sans">
 
     <div id="app" class="w-full max-w-xl bg-white p-6 md:p-8 rounded-xl card">
         <h1 class="text-3xl font-bold text-center text-primary mb-2">Native English Coach</h1>
-        <p class="text-center text-gray-500 mb-6">Enter a phrase to instantly correct it and hear the native pronunciation.</p>
+        <p class="text-center text-gray-500 mb-6">Record your phrase to instantly correct it and hear the native pronunciation.</p>
 
-        <!-- User Input Section -->
+        <!-- User Input Section (Now Speech Input) -->
         <div class="mb-6">
-            <label for="englishInput" class="block text-sm font-medium text-gray-700 mb-2">Your English Phrase:</label>
-            <textarea id="englishInput" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition duration-150" placeholder="e.g., I desire to have more knowledge."></textarea>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Your Spoken Phrase:</label>
+            <div id="recognizedTextDisplay" class="min-h-[70px] w-full p-3 border border-gray-300 rounded-lg bg-gray-50 flex items-center text-gray-500 italic">
+                Click the microphone to start speaking.
+            </div>
+            <p id="sttStatus" class="text-sm mt-1 text-gray-500"></p>
         </div>
 
-        <!-- Action Button -->
+        <!-- Action Button (Now controls Recording and Correction) -->
         <div class="mb-8">
-            <button id="submitButton" class="w-full flex items-center justify-center px-6 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50" disabled>
-                <span id="buttonText">Correct & Speak</span>
+            <button id="mainActionButton" class="w-full flex items-center justify-center px-6 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50">
+                <!-- Mic Icon (Default) -->
+                <svg id="micIcon" class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 12h2v4a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4zm-3 0h2v4a1 1 0 01-1 1H8a1 1 0 01-1-1v-4zM7 7a1 1 0 00-1 1v2a1 1 0 102 0V8a1 1 0 00-1-1zm6 0a1 1 0 00-1 1v2a1 1 0 102 0V8a1 1 0 00-1-1zM4 14a1 1 0 01-1 1v2a1 1 0 102 0v-2a1 1 0 01-1-1zm12 0a1 1 0 01-1 1v2a1 1 0 102 0v-2a1 1 0 01-1-1zM5 4a1 1 0 00-1 1v2a1 1 0 102 0V5a1 1 0 00-1-1zm10 0a1 1 0 00-1 1v2a1 1 0 102 0V5a1 1 0 00-1-1zM2 9a1 1 0 011-1h2a1 1 0 110 2H3a1 1 0 01-1-1zm16 0a1 1 0 01-1-1h-2a1 1 0 110 2h2a1 1 0 011-1zM9 2a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1zM11 19a1 1 0 001 1h-2a1 1 0 100 2h2a1 1 0 001-1v-2a1 1 0 00-1-1zM7 2a1 1 0 00-1 1v2a1 1 0 102 0V3a1 1 0 00-1-1zM13 2a1 1 0 00-1 1v2a1 1 0 102 0V3a1 1 0 00-1-1z"/></svg>
+                <!-- Pencil Icon (Correction) -->
+                <svg id="correctionIcon" class="w-6 h-6 mr-3 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-1.88 2.518L4.3 14.118V16h1.88l8.988-8.988-1.88-1.88z" /></svg>
+                <span id="buttonText">Start Recording</span>
                 <div id="loadingSpinner" class="spinner ml-3 hidden"></div>
             </button>
             <p id="errorFeedback" class="text-red-600 mt-2 text-base font-semibold hidden border-2 border-red-300 p-2 rounded-lg bg-red-100"></p>
@@ -71,7 +91,7 @@
             
             <!-- Original Phrase -->
             <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-300">
-                <p class="text-xs font-semibold uppercase text-gray-500">Your Original Phrase</p>
+                <p class="text-xs font-semibold uppercase text-gray-500">Your Recognized Phrase</p>
                 <p id="originalPhraseDisplay" class="text-gray-900 mt-1 italic"></p>
             </div>
 
@@ -113,9 +133,10 @@
         const TTS_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${API_KEY}`;
 
         // UI Elements
-        const englishInput = document.getElementById('englishInput');
-        const submitButton = document.getElementById('submitButton');
+        const mainActionButton = document.getElementById('mainActionButton');
         const buttonText = document.getElementById('buttonText');
+        const micIcon = document.getElementById('micIcon');
+        const correctionIcon = document.getElementById('correctionIcon');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const errorFeedback = document.getElementById('errorFeedback');
         const resultsContainer = document.getElementById('resultsContainer');
@@ -124,11 +145,125 @@
         const explanationDisplay = document.getElementById('explanationDisplay');
         const playButton = document.getElementById('playButton');
         const ttsAudio = document.getElementById('ttsAudio');
+        const recognizedTextDisplay = document.getElementById('recognizedTextDisplay');
+        const sttStatus = document.getElementById('sttStatus');
         
-        let audioBlobUrl = null; // for TTS audio
+        let audioBlobUrl = null; 
+        let currentPhrase = '';
+
+        // Application State
+        // 'idle': Ready to record
+        // 'recording': Currently listening
+        // 'ready_to_correct': Speech recorded, waiting for correction
+        // 'processing': Calling API
+        let appState = 'idle';
+
+        // --- Speech Recognition Setup ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false; // Stop after a pause
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                setAppState('recording');
+                sttStatus.textContent = "Listening for your phrase...";
+                recognizedTextDisplay.textContent = '...';
+                recognizedTextDisplay.classList.add('animate-pulse-mic');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                currentPhrase = transcript;
+                recognizedTextDisplay.textContent = transcript;
+                recognizedTextDisplay.classList.remove('italic', 'text-gray-500');
+                recognizedTextDisplay.classList.add('text-gray-800', 'font-medium');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+                sttStatus.textContent = `Error: ${event.error}`;
+                errorFeedback.textContent = "Recording failed. Please check microphone permissions and try again.";
+                errorFeedback.classList.remove('hidden');
+                setAppState('idle');
+            };
+
+            recognition.onend = () => {
+                recognizedTextDisplay.classList.remove('animate-pulse-mic');
+                if (currentPhrase.length > 0) {
+                    setAppState('ready_to_correct');
+                    sttStatus.textContent = "Phrase captured. Click 'Correct & Speak'.";
+                } else {
+                    sttStatus.textContent = "No speech detected. Click the mic to try again.";
+                    setAppState('idle');
+                }
+            };
+        } else {
+            // Fallback for browsers without STT support
+            errorFeedback.textContent = "Speech Recognition is not supported in this browser. Please use Chrome or Edge.";
+            errorFeedback.classList.remove('hidden');
+        }
+
+        // --- State Machine ---
+        function setAppState(newState) {
+            appState = newState;
+            cleanupAudioResources(false); // Clean up results but keep error if necessary
+            errorFeedback.classList.add('hidden');
+            sttStatus.textContent = '';
+            mainActionButton.disabled = false;
+            micIcon.classList.add('hidden');
+            correctionIcon.classList.add('hidden');
+            loadingSpinner.classList.add('hidden');
+            mainActionButton.classList.remove('bg-red-500', 'hover:bg-red-600', 'bg-secondary', 'hover:bg-teal-600');
+            mainActionButton.classList.add('bg-primary', 'hover:bg-indigo-700');
+
+            switch (appState) {
+                case 'idle':
+                    buttonText.textContent = 'Start Recording';
+                    micIcon.classList.remove('hidden');
+                    break;
+                case 'recording':
+                    buttonText.textContent = 'Listening... (Click to Stop)';
+                    mainActionButton.classList.remove('bg-primary', 'hover:bg-indigo-700');
+                    mainActionButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                    micIcon.classList.remove('hidden');
+                    break;
+                case 'ready_to_correct':
+                    buttonText.textContent = 'Correct & Speak';
+                    correctionIcon.classList.remove('hidden');
+                    mainActionButton.classList.remove('bg-primary', 'hover:bg-indigo-700');
+                    mainActionButton.classList.add('bg-secondary', 'hover:bg-teal-600');
+                    break;
+                case 'processing':
+                    buttonText.textContent = 'Processing...';
+                    loadingSpinner.classList.remove('hidden');
+                    mainActionButton.disabled = true;
+                    break;
+            }
+        }
+
+        // --- Button Click Handler ---
+        mainActionButton.addEventListener('click', () => {
+            if (appState === 'idle') {
+                if (recognition) {
+                    currentPhrase = ''; // Clear phrase before starting
+                    recognition.start();
+                }
+            } else if (appState === 'recording') {
+                if (recognition) {
+                    recognition.stop();
+                    // onend handler will transition state
+                }
+            } else if (appState === 'ready_to_correct') {
+                correctAndSynthesize(currentPhrase);
+            }
+        });
+
 
         // --- Audio Cleanup Function ---
-        function cleanupAudioResources() {
+        function cleanupAudioResources(resetInput = true) {
             if (audioBlobUrl) {
                 URL.revokeObjectURL(audioBlobUrl);
                 audioBlobUrl = null;
@@ -137,31 +272,15 @@
             playButton.disabled = true;
             resultsContainer.classList.add('hidden');
             errorFeedback.classList.add('hidden');
+            if (resetInput) {
+                recognizedTextDisplay.textContent = 'Click the microphone to start speaking.';
+                recognizedTextDisplay.classList.remove('text-gray-800', 'font-medium');
+                recognizedTextDisplay.classList.add('italic', 'text-gray-500');
+                currentPhrase = '';
+            }
         }
 
-        // --- Event Listeners ---
-        englishInput.addEventListener('input', () => {
-            const isEmpty = englishInput.value.trim().length === 0;
-            submitButton.disabled = isEmpty;
-            if (isEmpty) {
-                cleanupAudioResources();
-            }
-        });
-
-        submitButton.addEventListener('click', correctAndSynthesize);
-
-        englishInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault(); 
-                if (!submitButton.disabled) {
-                    correctAndSynthesize();
-                }
-            }
-        });
-        // --- End Event Listeners ---
-
-
-        // --- Exponential Backoff Fetch Wrapper ---
+        // --- Exponential Backoff Fetch Wrapper (Unchanged) ---
         async function fetchWithRetry(url, options, maxRetries = 5) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
@@ -196,9 +315,7 @@
             throw new Error("Exceeded maximum retries.");
         }
 
-        // --- Audio Utility Functions ---
-
-        // Converts Base64 string to ArrayBuffer
+        // --- Audio Utility Functions (Unchanged) ---
         function base64ToArrayBuffer(base64) {
             const binaryString = atob(base64);
             const len = binaryString.length;
@@ -209,7 +326,6 @@
             return bytes.buffer;
         }
 
-        // Converts 16-bit PCM audio data to WAV Blob (required for playback)
         function pcmToWav(pcm16, sampleRate) {
             const numChannels = 1;
             const bytesPerSample = 2; // 16-bit PCM
@@ -252,7 +368,6 @@
             return new Blob([buffer], { type: 'audio/wav' });
         }
         
-        // Plays the TTS audio
         function playAudio() {
             if (ttsAudio.src) {
                 ttsAudio.play();
@@ -270,17 +385,12 @@
 
         // --- Main Application Logic ---
 
-        async function correctAndSynthesize() {
-            const userText = englishInput.value.trim();
-            if (!userText) {
+        async function correctAndSynthesize(userText) {
+            if (!userText || appState !== 'ready_to_correct') {
                 return;
             }
-
-            // Clear previous results and set loading state
-            cleanupAudioResources();
-            submitButton.disabled = true;
-            buttonText.textContent = 'Processing...';
-            loadingSpinner.classList.remove('hidden');
+            
+            setAppState('processing');
             
             let correctedText;
 
@@ -288,11 +398,19 @@
                 if (USE_MOCK_DATA) {
                     // --- MOCK DATA SIMULATION ---
                     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+                    
+                    // Improved Mock Response based on user's feedback ("I am Ecuador")
+                    const mockCorrection = userText.toLowerCase().includes('ecuador') ? "I am from Ecuador." : "That's a very formal way to say it! Try, 'I'd like to learn more.'";
+                    const mockExplanation = userText.toLowerCase().includes('ecuador') 
+                        ? "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural."
+                        : "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
+
                     const mockData = {
                         originalPhrase: userText,
-                        nativeCorrection: "I'd like to learn more.",
-                        explanation: "The phrase 'I desire to have more knowledge' is grammatically correct but very formal. 'I'd like to learn more' is a common, natural, and friendly way to express this desire in everyday English. The TTS audio playback is currently disabled in Mock Mode.",
+                        nativeCorrection: mockCorrection,
+                        explanation: mockExplanation,
                     };
+
                     correctedText = mockData.nativeCorrection;
 
                     // Update UI with MOCK results
@@ -300,11 +418,12 @@
                     correctedPhraseDisplay.textContent = correctedText;
                     explanationDisplay.textContent = mockData.explanation;
                     resultsContainer.classList.remove('hidden');
-                    playButton.disabled = true; // Cannot mock TTS audio easily
+                    playButton.disabled = true; 
 
-                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls bypassed using MOCK data. Set 'USE_MOCK_DATA' back to false to attempt real API call.)";
+                    errorFeedback.textContent = "✅ SUCCESS: UI and Voice input logic confirmed! (API Calls bypassed using MOCK data.)";
                     errorFeedback.classList.remove('hidden');
-                    return; // Exit the function after mocking
+                    setAppState('idle');
+                    return; 
                     // --- END MOCK DATA SIMULATION ---
                 }
 
@@ -403,18 +522,16 @@
                 errorFeedback.textContent = `CRITICAL ERROR: ${error.message}`;
                 errorFeedback.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
+                setAppState('idle');
             } finally {
-                // Reset button state
-                submitButton.disabled = englishInput.value.trim().length === 0;
-                buttonText.textContent = 'Correct & Speak';
-                loadingSpinner.classList.add('hidden');
+                if (appState === 'processing') {
+                    setAppState('idle');
+                }
             }
         }
 
-        // Initial check to enable button if text is already present
-        if (englishInput.value.trim().length > 0) {
-            submitButton.disabled = false;
-        }
+        // Initialize state on load
+        setAppState('idle');
     </script>
 </body>
 </html>
