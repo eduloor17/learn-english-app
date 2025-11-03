@@ -101,7 +101,7 @@
         <div class="mb-8">
             <button id="mainActionButton" class="w-full flex items-center justify-center px-6 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50">
                 <!-- Mic Icon (Default) -->
-                <svg id="micIcon" class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 12h2v4a1 1 0 01-1 1h-2a1 1 0 01-1-1v-4zm-3 0h2v4a1 1 0 01-1 1H8a1 1 0 01-1-1v-4zM7 7a1 1 0 00-1 1v2a1 1 0 102 0V8a1 1 0 00-1-1zm6 0a1 1 0 00-1 1v2a1 1 0 102 0V8a1 1 0 00-1-1zM4 14a1 1 0 01-1 1v2a1 1 0 102 0v-2a1 1 0 01-1-1zm12 0a1 1 0 01-1 1v2a1 1 0 102 0v-2a1 1 0 01-1-1zM5 4a1 1 0 00-1 1v2a1 1 0 102 0V5a1 1 0 00-1-1zm10 0a1 1 0 00-1 1v2a1 1 0 102 0V5a1 1 0 00-1-1zM2 9a1 1 0 011-1h2a1 1 0 110 2H3a1 1 0 01-1-1zm16 0a1 1 0 01-1-1h-2a1 1 0 110 2h2a1 1 0 011-1zM9 2a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1zM11 19a1 1 0 001 1h-2a1 1 0 100 2h2a1 1 0 001-1v-2a1 1 0 00-1-1zM7 2a1 1 0 00-1 1v2a1 1 0 102 0V3a1 1 0 00-1-1zM13 2a1 1 0 00-1 1v2a1 1 0 102 0V3a1 1 0 00-1-1z"/></svg>
+                <svg id="micIcon" class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 8c1.66 0 3-1.34 3-3V3c0-1.66-1.34-3-3-3S7 1.34 7 3v2c0 1.66 1.34 3 3 3zm5-5V3c0-1.66 1.34-3 3-3s3 1.34 3 3v2c0 1.66-1.34 3-3 3s-3-1.34-3-3zm-5 13c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3s3-1.34 3-3h2c0 2.76-2.24 5-5 5zm9-5c0 1.66-1.34 3-3 3s-3-1.34-3-3H15zm-14 0h2c0 1.66 1.34 3 3 3s3-1.34 3-3H1z"/></svg>
                 <!-- Pencil Icon (Correction) -->
                 <svg id="correctionIcon" class="w-6 h-6 mr-3 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-1.88 2.518L4.3 14.118V16h1.88l8.988-8.988-1.88-1.88z" /></svg>
                 <span id="buttonText">Start Recording</span>
@@ -147,8 +147,8 @@
         // --- API & Utility Setup ---
         const API_KEY = ""; // Intentionally empty, expected to be injected by runtime environment.
         
-        // **DEBUG FLAG: SET BACK TO TRUE TO AVOID 403 PERMISSION ERRORS**
-        const USE_MOCK_DATA = true; 
+        // ** LIVE API MODE: Setting to false to use the Gemini API **
+        const USE_MOCK_DATA = false; 
 
         // Models and Endpoints (used only if USE_MOCK_DATA is false)
         const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
@@ -368,7 +368,7 @@
             }
         }
 
-        // --- Exponential Backoff Fetch Wrapper (Only used if USE_MOCK_DATA is false) ---
+        // --- Exponential Backoff Fetch Wrapper ---
         async function fetchWithRetry(url, options, maxRetries = 5) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
@@ -381,7 +381,7 @@
                     
                     if (response.status === 403) {
                          const service = url.includes(LLM_MODEL) ? 'Language Model (LLM)' : 'Text-to-Speech (TTS)';
-                        throw new Error(`Authorization Failed (403 Forbidden). The request to the ${service} API was denied. This is an environment configuration issue, meaning the provided API Key is invalid or missing required permissions.`);
+                        throw new Error(`Authorization Failed (403 Forbidden). The request to the ${service} API was denied. Check console for error details.`);
                     }
                     if (response.status === 429 && i < maxRetries - 1) {
                         const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
@@ -400,7 +400,7 @@
             throw new Error("Exceeded maximum retries.");
         }
 
-        // --- Audio Utility Functions (Only used if USE_MOCK_DATA is false) ---
+        // --- Audio Utility Functions ---
         function base64ToArrayBuffer(base64) {
             const binaryString = atob(base64);
             const len = binaryString.length;
@@ -436,7 +436,7 @@
             view.setUint16(22, numChannels, true); 
             view.setUint32(24, sampleRate, true); 
             view.setUint32(28, sampleRate * numChannels * bytesPerSample, true); 
-            view.setUint16(32, numChannels * bytesPerSample, true); 
+            view.setUint32(32, numChannels * bytesPerSample, true); 
             view.setUint16(34, 16, true); 
 
             // Data sub-chunk
@@ -454,19 +454,6 @@
         }
         
         function playAudio() {
-            if (USE_MOCK_DATA) {
-                // MOCK MODE: Skip audio, but simulate success visual state
-                console.log("Mock Audio Playback: Skipping actual sound synthesis. The UI is behaving as if audio is playing.");
-                playButton.disabled = true;
-                console.log("Play button disabled during simulated playback (1.5s).");
-                setTimeout(() => {
-                    playButton.disabled = false;
-                    console.log("Play button re-enabled after simulated playback.");
-                }, 1500); // Simulate 1.5 second playback
-                return;
-            }
-            
-            // REAL API MODE
             if (ttsAudio.src) {
                 ttsAudio.play();
                 playButton.disabled = true;
@@ -493,58 +480,6 @@
             let correctedText;
 
             try {
-                if (USE_MOCK_DATA) {
-                    // --- MOCK DATA SIMULATION ---
-                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-                    
-                    const lowerText = userText.toLowerCase().trim();
-
-                    let mockCorrection = "That's a very wordy sentence! Try simplifying it to: 'I'd like to learn more about that topic.'";
-                    let mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
-
-                    if (lowerText.includes("dont heard") || lowerText.includes("don't heard")) {
-                        mockCorrection = "I didn't hear you.";
-                        mockExplanation = "The mistake is mixing the present tense auxiliary verb ('don't') with the past tense or past participle ('heard'). To form the simple past negative, you must use the past tense auxiliary ('didn't') followed by the base form of the verb ('hear').";
-                    } else if (lowerText.includes('book on the desk') && lowerText.includes('isn\'t there')) {
-                        // Singular subject check
-                        mockCorrection = "The book is on the desk, right?";
-                        mockExplanation = "The structure is grammatically sound but formal. Native speakers prefer the direct statement and a simple tag question, often using a less formal phrase like '**right?**' instead of 'isn't there?'";
-                    } else if (lowerText.includes('books') && lowerText.includes('aren\'t there')) {
-                         // Plural subject check (the user's latest test)
-                        mockCorrection = "There are books on the desk, right?";
-                        mockExplanation = "Your primary error is **Subject-Verb Agreement** ('There is a books'). Since 'books' is plural, it requires the plural verb 'There **are** books'. We also replaced the formal 'aren't there?' with the more casual, native-sounding tag '**right?**'";
-                    } else if (lowerText.includes('ecuador')) {
-                        mockCorrection = "I am from Ecuador.";
-                        mockExplanation = "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural.";
-                    } else if (userText.length > 30 && !lowerText.includes('ecuador')) { 
-                        mockCorrection = "That's a very wordy sentence! Try simplifying it. For example, 'I need to find the main point.'";
-                        mockExplanation = "While grammatically correct, native speech often favors conciseness. Long, drawn-out sentences can make your speech sound stiff. Simplifying structures usually helps.";
-                    }
-
-                    const mockData = {
-                        originalPhrase: userText,
-                        nativeCorrection: mockCorrection,
-                        explanation: mockExplanation,
-                    };
-
-                    correctedText = mockData.nativeCorrection;
-
-                    // Update UI with MOCK results
-                    originalPhraseDisplay.textContent = mockData.originalPhrase;
-                    correctedPhraseDisplay.textContent = correctedText;
-                    explanationDisplay.textContent = mockData.explanation;
-                    resultsContainer.classList.remove('hidden');
-                    playButton.disabled = false; // Enable play button even in mock mode
-
-                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls and real audio are bypassed using MOCK data.)";
-                    errorFeedback.classList.remove('hidden');
-                    
-                    setAppState('idle');
-                    return; 
-                    // --- END MOCK DATA SIMULATION ---
-                }
-
-
                 // 1. LLM Call: Get Native Correction and Explanation (structured JSON)
                 const llmPayload = {
                     contents: [{ 
@@ -582,7 +517,7 @@
                 
                 const jsonText = llmResult.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonText) {
-                    throw new Error("Failed to get a structured correction from the Language Model.");
+                    throw new Error("Failed to get a structured correction from the Language Model. Response was empty or malformed.");
                 }
                 
                 const parsedJson = JSON.parse(jsonText);
@@ -617,7 +552,7 @@
                 const mimeType = audioPart?.inlineData?.mimeType;
 
                 if (!audioData || !mimeType || !mimeType.startsWith("audio/L16")) {
-                    throw new Error("Failed to receive valid audio data from the Text-to-Speech Model. This may be an API key/permission issue.");
+                    throw new Error("Failed to receive valid audio data from the Text-to-Speech Model. Check API key/permissions.");
                 }
                 
                 const rateMatch = mimeType.match(/rate=(\d+)/);
@@ -635,7 +570,7 @@
 
             } catch (error) {
                 console.error("An error occurred during API process:", error);
-                errorFeedback.textContent = `CRITICAL ERROR (API Disabled): ${error.message}. Please use MOCK data mode for now.`;
+                errorFeedback.textContent = `CRITICAL ERROR: ${error.message}`;
                 errorFeedback.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
             } finally {
@@ -645,14 +580,10 @@
 
         // Initialize mode and state on load
         window.onload = () => {
-             // Set the new phrase for testing the fix
-             typedInput.value = "There is a books at the desk, aren't there?";
+             // Set a new phrase to test the live API functionality
+             typedInput.value = "I am highly interested on the subject and want to learn more.";
              // Start in Type mode for immediate use
              setInputMode('type'); 
-             if (USE_MOCK_DATA) {
-                 errorFeedback.textContent = "ATTENTION: Running in MOCK DATA mode to bypass API permission errors. Results and audio playback are simulated (the button works, but no sound comes out).";
-                 errorFeedback.classList.remove('hidden');
-             }
         };
     </script>
 </body>
