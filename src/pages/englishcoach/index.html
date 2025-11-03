@@ -500,12 +500,12 @@
                     let mockCorrection = "That's a very formal way to say it! Try, 'I'd like to learn more.'";
                     let mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
 
-                    if (lowerText.includes('ecuador')) {
+                    if (lowerText.includes('book at the desk')) {
+                        mockCorrection = "The book is on the desk, right?";
+                        mockExplanation = "The structure 'There is a book at the desk, isn't there?' is grammatically sound but slightly clunky. Native speakers prefer the direct statement and a simple tag question, often using a less formal phrase like '**right?**' instead of 'isn't there?' to confirm common knowledge.";
+                    } else if (lowerText.includes('ecuador')) {
                         mockCorrection = "I am from Ecuador.";
                         mockExplanation = "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural.";
-                    } else if (lowerText.includes('book at the desk') && lowerText.includes('is not there')) {
-                        mockCorrection = "There is a book at the desk, **isn't there**?";
-                        mockExplanation = "Your phrase used the tag question 'is not there?', which is grammatically correct but sounds very unnatural. Native English speakers almost always use the contraction '**isn't there?**' in tag questions.";
                     } else if (userText.length > 20) {
                         mockCorrection = "That's a very long sentence! Try simplifying it to: 'I'd like to learn more about that topic.'";
                     }
@@ -634,7 +634,9 @@
 
         // Initialize mode and state on load
         window.onload = () => {
-             setInputMode('speak');
+             setInputMode('type'); // Start in Type mode for immediate use
+             // Automatically populate the input field with the user's last attempted phrase
+             typedInput.value = "There is a book at the desk, isn't there?";
              if (USE_MOCK_DATA) {
                  errorFeedback.textContent = "ATTENTION: Running in MOCK DATA mode to bypass API permission errors. Results and audio playback are simulated, but the UI is fully functional.";
                  errorFeedback.classList.remove('hidden');
