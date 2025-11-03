@@ -145,9 +145,9 @@
 
     <script>
         // --- API & Utility Setup ---
-        const API_KEY = ""; // Intentionally empty, expected to be injected by runtime environment.
+        // !!! IMPORTANT: If running on GitHub or local machine, replace the empty string with your actual Gemini API Key !!!
+        const API_KEY = "AIzaSyBqAIr0c6Addstmrnl_AUc74pZVOn3dyDo"; 
         
-        // ** LIVE API MODE: Setting to false to use the Gemini API **
         const USE_MOCK_DATA = false; 
 
         // Models and Endpoints (used only if USE_MOCK_DATA is false)
@@ -183,11 +183,7 @@
         let currentPhrase = '';
 
         // Application State
-        let inputMode = 'speak'; // 'speak' or 'type'
-        // 'idle': Ready to record/correct
-        // 'recording': Currently listening
-        // 'ready_to_correct': Speech recorded, waiting for correction (Speak mode only)
-        // 'processing': Calling API
+        let inputMode = 'speak'; 
         let appState = 'idle';
 
         // --- Speech Recognition Setup ---
@@ -195,7 +191,7 @@
         let recognition = null;
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
-            recognition.continuous = false; // Stop after a pause
+            recognition.continuous = false;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
 
@@ -229,7 +225,6 @@
                     sttStatus.textContent = "Phrase captured. Click 'Correct & Speak'.";
                 } else {
                     sttStatus.textContent = "No speech detected. Click the mic to try again.";
-                    // Reset placeholder text
                     recognizedTextDisplay.textContent = 'Click the **Start Recording** button below to begin speaking.';
                     recognizedTextDisplay.classList.remove('text-gray-800', 'font-medium');
                     recognizedTextDisplay.classList.add('italic', 'text-gray-500');
@@ -237,17 +232,16 @@
                 }
             };
         } else {
-            // Fallback for browsers without STT support
             errorFeedback.textContent = "Speech Recognition is not supported in this browser. Please use Chrome or Edge.";
             errorFeedback.classList.remove('hidden');
         }
         
         // --- Input Mode Management ---
         function setInputMode(mode) {
-            if (appState === 'recording' || appState === 'processing') return; // Do not switch while recording/processing
+            if (appState === 'recording' || appState === 'processing') return;
 
             inputMode = mode;
-            cleanupAudioResources(true); // Always clean up when switching modes
+            cleanupAudioResources(true); 
 
             // 1. Manage UI containers
             speakInputContainer.classList.toggle('hidden', mode !== 'speak');
@@ -265,7 +259,7 @@
                 speakModeBtn.classList.add('text-gray-500', 'border-transparent');
             }
             
-            // 3. Reset to idle state which updates the main button text
+            // 3. Reset to idle state 
             setAppState('idle');
         }
 
@@ -282,7 +276,6 @@
             mainActionButton.classList.remove('bg-red-500', 'hover:bg-red-600', 'bg-secondary', 'hover:bg-teal-600');
             mainActionButton.classList.add('bg-primary', 'hover:bg-indigo-700');
             
-            // Reset status text visibility for Speak mode
             if (inputMode === 'speak') {
                 sttStatus.textContent = '';
             } 
@@ -320,18 +313,17 @@
 
         // --- Button Click Handler ---
         mainActionButton.addEventListener('click', () => {
-            cleanupAudioResources(false); // Clean up previous results/audio, but keep text/status
+            cleanupAudioResources(false); 
 
             if (inputMode === 'speak') {
                 if (appState === 'idle') {
                     if (recognition) {
-                        currentPhrase = ''; // Clear phrase before starting
+                        currentPhrase = '';
                         recognition.start();
                     }
                 } else if (appState === 'recording') {
                     if (recognition) {
                         recognition.stop();
-                        // onend handler will transition state
                     }
                 } else if (appState === 'ready_to_correct') {
                     correctAndSynthesize(currentPhrase);
@@ -359,7 +351,6 @@
             resultsContainer.classList.add('hidden');
             errorFeedback.classList.add('hidden');
             if (resetInput) {
-                // Only reset the visual state of the input area
                 recognizedTextDisplay.textContent = 'Click the **Start Recording** button below to begin speaking.';
                 recognizedTextDisplay.classList.remove('text-gray-800', 'font-medium');
                 recognizedTextDisplay.classList.add('italic', 'text-gray-500');
@@ -381,7 +372,8 @@
                     
                     if (response.status === 403) {
                          const service = url.includes(LLM_MODEL) ? 'Language Model (LLM)' : 'Text-to-Speech (TTS)';
-                        throw new Error(`Authorization Failed (403 Forbidden). The request to the ${service} API was denied. Check console for error details.`);
+                         // Direct instruction for the user's external environment issue
+                        throw new Error(`Authorization Failed (403 Forbidden). You need to insert a valid Gemini API Key into the 'const API_KEY' variable to run this outside the sandbox.`);
                     }
                     if (response.status === 429 && i < maxRetries - 1) {
                         const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
@@ -580,7 +572,7 @@
 
         // Initialize mode and state on load
         window.onload = () => {
-             // Set a new phrase to test the live API functionality
+             // Set a common non-native error for easy testing
              typedInput.value = "I am highly interested on the subject and want to learn more.";
              // Start in Type mode for immediate use
              setInputMode('type'); 
