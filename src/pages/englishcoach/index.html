@@ -458,8 +458,10 @@
                 // MOCK MODE: Skip audio, but simulate success visual state
                 console.log("Mock Audio Playback: Skipping actual sound synthesis. The UI is behaving as if audio is playing.");
                 playButton.disabled = true;
+                console.log("Play button disabled during simulated playback (1.5s).");
                 setTimeout(() => {
                     playButton.disabled = false;
+                    console.log("Play button re-enabled after simulated playback.");
                 }, 1500); // Simulate 1.5 second playback
                 return;
             }
@@ -500,7 +502,10 @@
                     let mockCorrection = "That's a very formal way to say it! Try, 'I'd like to learn more.'";
                     let mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
 
-                    if (lowerText.includes('book at the desk')) {
+                    if (lowerText.includes("dont heard") || lowerText.includes("don't heard")) {
+                        mockCorrection = "I didn't hear you.";
+                        mockExplanation = "The mistake is mixing the present tense auxiliary verb ('don't') with the past tense or past participle ('heard'). To form the simple past negative, you must use the past tense auxiliary ('didn't') followed by the base form of the verb ('hear').";
+                    } else if (lowerText.includes('book at the desk')) {
                         mockCorrection = "The book is on the desk, right?";
                         mockExplanation = "The structure 'There is a book at the desk, isn't there?' is grammatically sound but slightly clunky. Native speakers prefer the direct statement and a simple tag question, often using a less formal phrase like '**right?**' instead of 'isn't there?' to confirm common knowledge. We also typically use the preposition **'on'** the desk for objects resting on a surface.";
                     } else if (lowerText.includes('ecuador')) {
@@ -635,9 +640,10 @@
 
         // Initialize mode and state on load
         window.onload = () => {
-             setInputMode('type'); // Start in Type mode for immediate use
              // Automatically populate the input field with the user's last attempted phrase
-             typedInput.value = "There is a book at the desk, isn't there?";
+             typedInput.value = "I don't heard you";
+             // Start in Type mode for immediate use
+             setInputMode('type'); 
              if (USE_MOCK_DATA) {
                  errorFeedback.textContent = "ATTENTION: Running in MOCK DATA mode to bypass API permission errors. Results and audio playback are simulated, but the UI is fully functional.";
                  errorFeedback.classList.remove('hidden');
