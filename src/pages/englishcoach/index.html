@@ -497,7 +497,7 @@
                     // --- MOCK DATA SIMULATION ---
                     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
                     
-                    const lowerText = userText.toLowerCase();
+                    const lowerText = userText.toLowerCase().trim();
 
                     let mockCorrection = "That's a very formal way to say it! Try, 'I'd like to learn more.'";
                     let mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
@@ -505,15 +505,15 @@
                     if (lowerText.includes("dont heard") || lowerText.includes("don't heard")) {
                         mockCorrection = "I didn't hear you.";
                         mockExplanation = "The mistake is mixing the present tense auxiliary verb ('don't') with the past tense or past participle ('heard'). To form the simple past negative, you must use the past tense auxiliary ('didn't') followed by the base form of the verb ('hear').";
-                    } else if (lowerText.includes('book at the desk')) {
+                    } else if (lowerText.includes('book on the desk') && lowerText.includes('isn\'t there')) {
                         mockCorrection = "The book is on the desk, right?";
-                        mockExplanation = "The structure 'There is a book at the desk, isn't there?' is grammatically sound but slightly clunky. Native speakers prefer the direct statement and a simple tag question, often using a less formal phrase like '**right?**' instead of 'isn't there?' to confirm common knowledge. We also typically use the preposition **'on'** the desk for objects resting on a surface.";
+                        mockExplanation = "The structure 'There is a book on the desk, isn't there?' is grammatically sound but slightly clunky and overly formal. Native speakers prefer a simple statement followed by an informal tag like '**right?**' to confirm common knowledge. The corrected phrase is much more natural for everyday use.";
                     } else if (lowerText.includes('ecuador')) {
                         mockCorrection = "I am from Ecuador.";
                         mockExplanation = "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural.";
-                    } else if (userText.length > 20) {
-                        mockCorrection = "That's a very long sentence! Try simplifying it to: 'I'd like to learn more about that topic.'";
-                        mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
+                    } else if (userText.length > 30 && !lowerText.includes('ecuador')) { // A little more permissive on length to avoid false positives
+                        mockCorrection = "That's a very wordy sentence! Try simplifying it. For example, 'I need to find the main point.'";
+                        mockExplanation = "While grammatically correct, native speech often favors conciseness. Long, drawn-out sentences can make your speech sound stiff. Simplifying structures usually helps.";
                     }
 
                     const mockData = {
@@ -531,7 +531,7 @@
                     resultsContainer.classList.remove('hidden');
                     playButton.disabled = false; // Enable play button even in mock mode
 
-                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls bypassed using MOCK data.)";
+                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls and real audio are bypassed using MOCK data.)";
                     errorFeedback.classList.remove('hidden');
                     
                     setAppState('idle');
@@ -640,12 +640,12 @@
 
         // Initialize mode and state on load
         window.onload = () => {
-             // Automatically populate the input field with the user's last attempted phrase
-             typedInput.value = "I don't heard you";
+             // Set the new phrase for testing the fix
+             typedInput.value = "There is a book on the desk, isn't there?";
              // Start in Type mode for immediate use
              setInputMode('type'); 
              if (USE_MOCK_DATA) {
-                 errorFeedback.textContent = "ATTENTION: Running in MOCK DATA mode to bypass API permission errors. Results and audio playback are simulated, but the UI is fully functional.";
+                 errorFeedback.textContent = "ATTENTION: Running in MOCK DATA mode to bypass API permission errors. Results and audio playback are simulated (the button works, but no sound comes out).";
                  errorFeedback.classList.remove('hidden');
              }
         };
