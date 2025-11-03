@@ -103,6 +103,9 @@
         // --- API & Utility Setup ---
         const API_KEY = ""; // Intentionally empty, expected to be injected by runtime environment.
         
+        // **DEBUG FLAG: SET TO TRUE TO BYPASS API CALLS AND TEST UI FUNCTIONALITY**
+        const USE_MOCK_DATA = false; 
+
         // Models and Endpoints
         const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
         const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
@@ -282,6 +285,30 @@
             let correctedText;
 
             try {
+                if (USE_MOCK_DATA) {
+                    // --- MOCK DATA SIMULATION ---
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+                    const mockData = {
+                        originalPhrase: userText,
+                        nativeCorrection: "I'd like to learn more.",
+                        explanation: "The phrase 'I desire to have more knowledge' is grammatically correct but very formal. 'I'd like to learn more' is a common, natural, and friendly way to express this desire in everyday English. The TTS audio playback is currently disabled in Mock Mode.",
+                    };
+                    correctedText = mockData.nativeCorrection;
+
+                    // Update UI with MOCK results
+                    originalPhraseDisplay.textContent = mockData.originalPhrase;
+                    correctedPhraseDisplay.textContent = correctedText;
+                    explanationDisplay.textContent = mockData.explanation;
+                    resultsContainer.classList.remove('hidden');
+                    playButton.disabled = true; // Cannot mock TTS audio easily
+
+                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls bypassed using MOCK data. Set 'USE_MOCK_DATA' back to false to attempt real API call.)";
+                    errorFeedback.classList.remove('hidden');
+                    return; // Exit the function after mocking
+                    // --- END MOCK DATA SIMULATION ---
+                }
+
+
                 // 1. LLM Call: Get Native Correction and Explanation (structured JSON)
                 const llmPayload = {
                     contents: [{ 
