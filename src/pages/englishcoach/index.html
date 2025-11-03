@@ -146,8 +146,8 @@
         // --- API & Utility Setup ---
         const API_KEY = ""; // Intentionally empty, expected to be injected by runtime environment.
         
-        // **DEBUG FLAG: SET TO TRUE TO BYPASS API CALLS AND TEST UI FUNCTIONALITY**
-        const USE_MOCK_DATA = true; 
+        // **DEBUG FLAG: SET TO FALSE TO CALL THE REAL API (LLM and TTS)**
+        const USE_MOCK_DATA = false; 
 
         // Models and Endpoints
         const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
@@ -485,14 +485,20 @@
                     // --- MOCK DATA SIMULATION ---
                     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
                     
-                    // Improved Mock Response based on user's feedback ("I am Ecuador")
-                    const mockCorrection = userText.toLowerCase().includes('ecuador') 
-                        ? "I am from Ecuador." 
-                        : (userText.length > 20 ? "That's a very long sentence! Try simplifying it to: 'I'd like to learn more about that topic.'" : "That's a very formal way to say it! Try, 'I'd like to learn more.'");
-                    
-                    const mockExplanation = userText.toLowerCase().includes('ecuador') 
-                        ? "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural."
-                        : "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
+                    const lowerText = userText.toLowerCase();
+
+                    let mockCorrection = "That's a very formal way to say it! Try, 'I'd like to learn more.'";
+                    let mockExplanation = "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
+
+                    if (lowerText.includes('ecuador')) {
+                        mockCorrection = "I am from Ecuador.";
+                        mockExplanation = "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural.";
+                    } else if (lowerText.includes('book at the desk') && lowerText.includes('is not there')) {
+                        mockCorrection = "There is a book at the desk, **isn't there**?";
+                        mockExplanation = "Your phrase used the tag question 'is not there?', which is grammatically correct but sounds very unnatural. Native English speakers almost always use the contraction '**isn't there?**' in tag questions.";
+                    } else if (userText.length > 20) {
+                        mockCorrection = "That's a very long sentence! Try simplifying it to: 'I'd like to learn more about that topic.'";
+                    }
 
                     const mockData = {
                         originalPhrase: userText,
