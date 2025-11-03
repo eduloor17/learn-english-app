@@ -62,16 +62,39 @@
 
     <div id="app" class="w-full max-w-xl bg-white p-6 md:p-8 rounded-xl card">
         <h1 class="text-3xl font-bold text-center text-primary mb-2">Native English Coach</h1>
-        <p class="text-center text-gray-500 mb-6">Record your phrase to instantly correct it and hear the native pronunciation.</p>
+        <p class="text-center text-gray-500 mb-6">Enter your phrase by speaking or typing to get instant native correction.</p>
 
-        <!-- User Input Section (Now Speech Input) -->
-        <div class="mb-6">
+        <!-- Input Mode Toggle -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <button id="speakModeBtn" onclick="setInputMode('speak')" class="flex-1 py-3 text-lg font-medium border-b-2 transition duration-150 focus:outline-none">
+                <span class="inline-flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 8c1.66 0 3-1.34 3-3V3c0-1.66-1.34-3-3-3S7 1.34 7 3v2c0 1.66 1.34 3 3 3zm5-5V3c0-1.66 1.34-3 3-3s3 1.34 3 3v2c0 1.66-1.34 3-3 3s-3-1.34-3-3zm-5 13c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3s3-1.34 3-3h2c0 2.76-2.24 5-5 5zm9-5c0 1.66-1.34 3-3 3s-3-1.34-3-3H15zm-14 0h2c0 1.66 1.34 3 3 3s3-1.34 3-3H1z"/></svg>
+                    Speak
+                </span>
+            </button>
+            <button id="typeModeBtn" onclick="setInputMode('type')" class="flex-1 py-3 text-lg font-medium border-b-2 transition duration-150 focus:outline-none">
+                <span class="inline-flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-1.88 2.518L4.3 14.118V16h1.88l8.988-8.988-1.88-1.88z" /></svg>
+                    Type
+                </span>
+            </button>
+        </div>
+
+        <!-- Input Containers -->
+        <div id="speakInputContainer" class="mb-6">
             <label class="block text-sm font-medium text-gray-700 mb-2">Your Spoken Phrase:</label>
             <div id="recognizedTextDisplay" class="min-h-[70px] w-full p-3 border border-gray-300 rounded-lg bg-gray-50 flex items-center text-gray-500 italic">
-                Click the microphone to start speaking.
+                Click the **Start Recording** button below to begin speaking.
             </div>
             <p id="sttStatus" class="text-sm mt-1 text-gray-500"></p>
         </div>
+
+        <div id="typeInputContainer" class="mb-6 hidden">
+            <label for="typedInput" class="block text-sm font-medium text-gray-700 mb-2">Type your phrase here:</label>
+            <textarea id="typedInput" rows="3" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-primary focus:border-primary"></textarea>
+            <p class="text-sm mt-1 text-gray-500">Press **Correct & Speak** to get feedback.</p>
+        </div>
+
 
         <!-- Action Button (Now controls Recording and Correction) -->
         <div class="mb-8">
@@ -91,7 +114,7 @@
             
             <!-- Original Phrase -->
             <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-300">
-                <p class="text-xs font-semibold uppercase text-gray-500">Your Recognized Phrase</p>
+                <p class="text-xs font-semibold uppercase text-gray-500">Your Phrase</p>
                 <p id="originalPhraseDisplay" class="text-gray-900 mt-1 italic"></p>
             </div>
 
@@ -145,16 +168,24 @@
         const explanationDisplay = document.getElementById('explanationDisplay');
         const playButton = document.getElementById('playButton');
         const ttsAudio = document.getElementById('ttsAudio');
+        
+        // Input Specific Elements
+        const speakModeBtn = document.getElementById('speakModeBtn');
+        const typeModeBtn = document.getElementById('typeModeBtn');
+        const speakInputContainer = document.getElementById('speakInputContainer');
+        const typeInputContainer = document.getElementById('typeInputContainer');
         const recognizedTextDisplay = document.getElementById('recognizedTextDisplay');
+        const typedInput = document.getElementById('typedInput');
         const sttStatus = document.getElementById('sttStatus');
         
         let audioBlobUrl = null; 
         let currentPhrase = '';
 
         // Application State
-        // 'idle': Ready to record
+        let inputMode = 'speak'; // 'speak' or 'type'
+        // 'idle': Ready to record/correct
         // 'recording': Currently listening
-        // 'ready_to_correct': Speech recorded, waiting for correction
+        // 'ready_to_correct': Speech recorded, waiting for correction (Speak mode only)
         // 'processing': Calling API
         let appState = 'idle';
 
@@ -205,24 +236,65 @@
             errorFeedback.textContent = "Speech Recognition is not supported in this browser. Please use Chrome or Edge.";
             errorFeedback.classList.remove('hidden');
         }
+        
+        // --- Input Mode Management ---
+        function setInputMode(mode) {
+            if (appState === 'recording' || appState === 'processing') return; // Do not switch while recording/processing
+
+            inputMode = mode;
+            cleanupAudioResources(true); // Always clean up when switching modes
+
+            // 1. Manage UI containers
+            speakInputContainer.classList.toggle('hidden', mode !== 'speak');
+            typeInputContainer.classList.toggle('hidden', mode !== 'type');
+
+            // 2. Manage Toggle buttons style
+            speakModeBtn.classList.remove('text-primary', 'border-primary', 'text-gray-500', 'border-transparent');
+            typeModeBtn.classList.remove('text-primary', 'border-primary', 'text-gray-500', 'border-transparent');
+            
+            if (mode === 'speak') {
+                speakModeBtn.classList.add('text-primary', 'border-primary');
+                typeModeBtn.classList.add('text-gray-500', 'border-transparent');
+            } else {
+                typeModeBtn.classList.add('text-primary', 'border-primary');
+                speakModeBtn.classList.add('text-gray-500', 'border-transparent');
+            }
+            
+            // 3. Reset to idle state which updates the main button text
+            setAppState('idle');
+        }
+
 
         // --- State Machine ---
         function setAppState(newState) {
             appState = newState;
-            cleanupAudioResources(false); // Clean up results but keep error if necessary
+            // Clean up visual status indicators and reset button styles
             errorFeedback.classList.add('hidden');
-            sttStatus.textContent = '';
             mainActionButton.disabled = false;
             micIcon.classList.add('hidden');
             correctionIcon.classList.add('hidden');
             loadingSpinner.classList.add('hidden');
             mainActionButton.classList.remove('bg-red-500', 'hover:bg-red-600', 'bg-secondary', 'hover:bg-teal-600');
             mainActionButton.classList.add('bg-primary', 'hover:bg-indigo-700');
+            
+            // Reset status text visibility for Speak mode
+            if (inputMode === 'speak') {
+                sttStatus.textContent = '';
+            } else {
+                 // For type mode, clear the recognized text display for cleanliness
+                 recognizedTextDisplay.textContent = 'Click the **Start Recording** button below to begin speaking.';
+            }
 
             switch (appState) {
                 case 'idle':
-                    buttonText.textContent = 'Start Recording';
-                    micIcon.classList.remove('hidden');
+                    buttonText.textContent = inputMode === 'speak' ? 'Start Recording' : 'Correct & Speak';
+                    if (inputMode === 'speak') {
+                        micIcon.classList.remove('hidden');
+                    } else {
+                        correctionIcon.classList.remove('hidden');
+                        mainActionButton.classList.remove('bg-primary', 'hover:bg-indigo-700');
+                        mainActionButton.classList.add('bg-secondary', 'hover:bg-teal-600');
+                    }
                     break;
                 case 'recording':
                     buttonText.textContent = 'Listening... (Click to Stop)';
@@ -246,18 +318,30 @@
 
         // --- Button Click Handler ---
         mainActionButton.addEventListener('click', () => {
-            if (appState === 'idle') {
-                if (recognition) {
-                    currentPhrase = ''; // Clear phrase before starting
-                    recognition.start();
+            cleanupAudioResources(false); // Clean up previous results/audio, but keep text/status
+
+            if (inputMode === 'speak') {
+                if (appState === 'idle') {
+                    if (recognition) {
+                        currentPhrase = ''; // Clear phrase before starting
+                        recognition.start();
+                    }
+                } else if (appState === 'recording') {
+                    if (recognition) {
+                        recognition.stop();
+                        // onend handler will transition state
+                    }
+                } else if (appState === 'ready_to_correct') {
+                    correctAndSynthesize(currentPhrase);
                 }
-            } else if (appState === 'recording') {
-                if (recognition) {
-                    recognition.stop();
-                    // onend handler will transition state
+            } else { // inputMode === 'type'
+                const text = typedInput.value.trim();
+                if (text.length > 0) {
+                    correctAndSynthesize(text);
+                } else {
+                    errorFeedback.textContent = "Please type a phrase before clicking 'Correct & Speak'.";
+                    errorFeedback.classList.remove('hidden');
                 }
-            } else if (appState === 'ready_to_correct') {
-                correctAndSynthesize(currentPhrase);
             }
         });
 
@@ -273,10 +357,12 @@
             resultsContainer.classList.add('hidden');
             errorFeedback.classList.add('hidden');
             if (resetInput) {
-                recognizedTextDisplay.textContent = 'Click the microphone to start speaking.';
+                // Only reset the visual state of the input area
+                recognizedTextDisplay.textContent = 'Click the **Start Recording** button below to begin speaking.';
                 recognizedTextDisplay.classList.remove('text-gray-800', 'font-medium');
                 recognizedTextDisplay.classList.add('italic', 'text-gray-500');
                 currentPhrase = '';
+                typedInput.value = '';
             }
         }
 
@@ -386,7 +472,7 @@
         // --- Main Application Logic ---
 
         async function correctAndSynthesize(userText) {
-            if (!userText || appState !== 'ready_to_correct') {
+            if (!userText || (inputMode === 'speak' && appState !== 'ready_to_correct') || appState === 'processing') {
                 return;
             }
             
@@ -400,7 +486,10 @@
                     await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
                     
                     // Improved Mock Response based on user's feedback ("I am Ecuador")
-                    const mockCorrection = userText.toLowerCase().includes('ecuador') ? "I am from Ecuador." : "That's a very formal way to say it! Try, 'I'd like to learn more.'";
+                    const mockCorrection = userText.toLowerCase().includes('ecuador') 
+                        ? "I am from Ecuador." 
+                        : (userText.length > 20 ? "That's a very long sentence! Try simplifying it to: 'I'd like to learn more about that topic.'" : "That's a very formal way to say it! Try, 'I'd like to learn more.'");
+                    
                     const mockExplanation = userText.toLowerCase().includes('ecuador') 
                         ? "In English, when referring to your country of origin, you should say 'I am **from** [Country]' or use the demonym, 'I am [Nationality]'. The corrected version is much more natural."
                         : "The phrase is grammatically fine but sounds overly formal. Native speakers typically use contractions ('I'd') and simpler verbs ('learn more') in casual conversation.";
@@ -420,7 +509,7 @@
                     resultsContainer.classList.remove('hidden');
                     playButton.disabled = true; 
 
-                    errorFeedback.textContent = "✅ SUCCESS: UI and Voice input logic confirmed! (API Calls bypassed using MOCK data.)";
+                    errorFeedback.textContent = "✅ SUCCESS: UI logic confirmed! (API Calls bypassed using MOCK data. Set 'USE_MOCK_DATA' to false to attempt real API call.)";
                     errorFeedback.classList.remove('hidden');
                     setAppState('idle');
                     return; 
@@ -522,16 +611,16 @@
                 errorFeedback.textContent = `CRITICAL ERROR: ${error.message}`;
                 errorFeedback.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
-                setAppState('idle');
             } finally {
-                if (appState === 'processing') {
-                    setAppState('idle');
-                }
+                // Ensure state is reset back to idle after processing (or error)
+                setAppState('idle');
             }
         }
 
-        // Initialize state on load
-        setAppState('idle');
+        // Initialize mode and state on load
+        window.onload = () => {
+             setInputMode('speak');
+        };
     </script>
 </body>
 </html>
