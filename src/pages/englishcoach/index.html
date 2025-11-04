@@ -79,12 +79,14 @@
         <div id="chatContainer" class="chat-container flex-grow p-4 space-y-4 border rounded-lg mb-4 bg-gray-50">
             <!-- Initial AI Message -->
             <div class="flex justify-start">
-                <div id="initial-ai-message" class="ai-message-playable max-w-xs md:max-w-md p-3 rounded-xl rounded-tl-none bg-ai-bubble text-gray-800 shadow-sm" data-text="Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. How can I help you start practicing today?" data-base64-audio="pending" data-sample-rate="pending">
+                <div id="initial-ai-message" class="ai-message-playable max-w-xs md:max-w-md p-3 rounded-xl rounded-tl-none bg-ai-bubble text-gray-800 shadow-sm" 
+                    data-text="Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. How can I help you start practicing today?" 
+                    data-base64-audio="pending" data-sample-rate="pending">
                     <p class="font-semibold text-secondary mb-1 text-sm">Tutor</p>
                     <p>Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. **How can I help you start practicing today?**</p>
-                    <div class="tts-status text-xs mt-2 text-secondary font-medium">
-                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
-                        Click to Hear
+                    <div class="tts-status text-xs mt-2 text-primary font-bold flex items-center">
+                        <div class="spinner mr-2 w-4 h-4" style="border-top: 4px solid #4F46E5;"></div>
+                        Loading Tutor Voice...
                     </div>
                 </div>
             </div>
@@ -136,6 +138,7 @@
         const micLoading = document.getElementById('micLoading');
         const inputStatus = document.getElementById('inputStatus');
         const errorFeedback = document.getElementById('errorFeedback');
+        const initialMessageElement = document.getElementById('initial-ai-message');
         
         // State Variables
         let chatHistory = []; 
@@ -178,8 +181,8 @@
                 }
                 tutorSourceNode = null;
             }
-            if (tutorAudioContext && tutorAudioContext.state !== 'closed') {
-                // Keep context alive but suspended if possible
+            if (tutorAudioContext) {
+                 // Clean up context to avoid resource leaks
                 tutorAudioContext.close().catch(e => console.warn("Failed to close AudioContext:", e));
             }
             tutorAudioContext = null;
@@ -187,15 +190,24 @@
 
             // Reset all TTS status elements to "Click to Hear" when audio is manually stopped
             document.querySelectorAll('.tts-status').forEach(statusElement => {
-                if (statusElement.textContent === "Playing...") {
-                    statusElement.classList.remove('text-primary', 'font-bold'); 
+                if (statusElement.textContent.includes("Playing")) {
+                    statusElement.classList.remove('text-primary', 'font-bold', 'flex', 'items-center'); 
                     statusElement.classList.add('text-secondary'); 
                     statusElement.innerHTML = `
                         <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
-                        Click to Hear
+                        Click to Hear (Replay)
                     `;
                 }
             });
+             // Reset initial message status if it was playing
+            const initialStatus = initialMessageElement.querySelector('.tts-status');
+            if(initialStatus.textContent.includes("Playing")) {
+                initialStatus.innerHTML = `
+                    <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                    Conversation Ready (Click to Replay)`;
+                initialStatus.classList.add('text-primary');
+                initialStatus.classList.remove('text-secondary', 'flex', 'items-center');
+            }
         }
 
         /** Clears all active audio players and streams. */
@@ -222,18 +234,18 @@
 
         /**
          * Plays raw PCM audio data using the Web Audio API (AudioContext).
-         * This bypasses stricter browser checks on Blob URLs.
          * @param {string} base64Data - Base64 encoded raw PCM (Int16) data.
          * @param {number} sampleRate - The sample rate of the audio (e.g., 24000).
          * @param {HTMLElement} statusElement - Element to show status.
+         * @param {boolean} isInitial - Whether this is the first message (affects replay text).
          */
-        function playTutorAudioUsingContext(base64Data, sampleRate, statusElement) {
+        function playTutorAudioUsingContext(base64Data, sampleRate, statusElement, isInitial = false) {
             stopTutorAudio(); // Stop any currently playing audio before starting new one
 
             // --- UI/Status Update (Pre-playback) ---
             statusElement.textContent = "Loading...";
-            statusElement.classList.add('text-primary'); 
-            statusElement.classList.remove('text-secondary');
+            statusElement.classList.remove('text-secondary'); 
+            statusElement.classList.add('text-primary', 'font-bold', 'flex', 'items-center');
 
             try {
                 // 1. Decode base64 to raw ArrayBuffer
@@ -241,6 +253,7 @@
                 const pcm16 = new Int16Array(pcmBuffer);
                 
                 // 2. Setup AudioContext and AudioBuffer
+                // Create context inside the user gesture event to bypass autoplay policy
                 tutorAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
                 
                 const audioBuffer = tutorAudioContext.createBuffer(
@@ -270,17 +283,20 @@
                         tutorSourceNode = null; 
                         tutorAudioContext = null;
                         
+                        // Determine the correct replay text
+                        const replayText = isInitial ? 'Conversation Ready (Click to Replay)' : 'Click to Hear (Replay)';
+                        
                         // Reset status element to 'Click to Hear'
-                        statusElement.classList.remove('text-primary', 'font-bold'); 
+                        statusElement.classList.remove('text-primary', 'font-bold', 'flex', 'items-center'); 
                         statusElement.classList.add('text-secondary'); 
                         statusElement.innerHTML = `
                             <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
-                            Click to Hear (Replay)
+                            ${replayText}
                         `;
                     }
                 };
                 
-                // Resume/start context (necessary for some browsers)
+                // Resume/start context (crucial for ensuring audio starts after a user gesture)
                 if (tutorAudioContext.state === 'suspended') {
                     tutorAudioContext.resume();
                 }
@@ -290,7 +306,7 @@
                 // --- UI/Status Update (Playing) ---
                 statusElement.textContent = "Playing...";
                 statusElement.classList.remove('text-secondary', 'font-medium'); 
-                statusElement.classList.add('text-primary', 'font-bold');
+                statusElement.classList.add('text-primary', 'font-bold', 'flex', 'items-center');
 
             } catch (e) {
                 console.error("Web Audio Playback Error:", e);
@@ -299,7 +315,7 @@
                 errorFeedback.classList.remove('hidden');
 
                 // Reset status element to 'Click to Hear'
-                statusElement.classList.remove('text-primary'); 
+                statusElement.classList.remove('text-primary', 'flex', 'items-center'); 
                 statusElement.classList.add('text-red-600'); 
                 statusElement.innerHTML = `
                     <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
@@ -339,6 +355,7 @@
                 content.setAttribute('data-base64-audio', audioData ? audioData.base64Data : 'unavailable');
                 content.setAttribute('data-sample-rate', audioData ? audioData.sampleRate : 'unavailable');
                 
+                // Status for dynamically generated messages is initially 'Click to Hear (Replay)'
                 let statusClass = 'tts-status text-xs mt-2 text-secondary font-medium';
 
                 content.innerHTML = `
@@ -391,27 +408,29 @@
          * Sets the application UI state (loading, idle, recording)
          */
         function setAppState(state) {
-            isProcessing = state === 'loading' || state === 'processing_audio';
+            isProcessing = state === 'loading' || state === 'processing_audio' || state === 'generating_speech';
             isRecording = state === 'recording';
             
             // Send button logic: disabled if processing, recording, or input is empty
             const isSendDisabled = isProcessing || isRecording || chatInput.value.trim() === '';
             sendButton.disabled = isSendDisabled;
 
-            sendLoading.classList.toggle('hidden', state !== 'loading' && state !== 'processing_audio');
+            sendLoading.classList.toggle('hidden', state !== 'loading' && state !== 'processing_audio' && state !== 'generating_speech');
             
             if (state === 'loading') {
                 sendButtonText.textContent = 'Generating Text...';
             } else if (state === 'processing_audio') {
                 sendButtonText.textContent = 'Transcribing Audio...';
+            } else if (state === 'generating_speech') {
+                 sendButtonText.textContent = 'Generating Speech...';
             } else {
                 sendButtonText.textContent = 'Send Message';
             }
             
             // --- Mic Button Management ---
             micButton.disabled = isProcessing; 
-            micIcon.classList.toggle('hidden', state === 'requesting_mic' || state === 'processing_audio');
-            micLoading.classList.toggle('hidden', state !== 'requesting_mic' && state !== 'processing_audio');
+            micIcon.classList.toggle('hidden', state === 'requesting_mic' || state === 'processing_audio' || state === 'generating_speech');
+            micLoading.classList.toggle('hidden', state !== 'requesting_mic' && state !== 'processing_audio' && state !== 'generating_speech');
             micButton.classList.toggle('bg-red-500', !isRecording);
             micButton.classList.toggle('hover:bg-red-600', !isRecording);
             micButton.classList.toggle('bg-primary', isRecording);
@@ -548,7 +567,6 @@
         
         /**
          * Calls the TTS API to generate and return the audio data object.
-         * NOTE: This function does not handle UI state (loading spinners).
          * @returns {{base64Data: string, sampleRate: number}|null}
          */
         async function generateTutorAudio(text) {
@@ -589,7 +607,6 @@
                 }
 
             } catch (error) {
-                // Log the error but return null so the LLM chat flow can continue without audio
                 console.error("TTS Error:", error);
                 return null;
             }
@@ -636,13 +653,13 @@
                 }
 
                 // 2. Generate Audio Data (Blocking, update status manually for TTS)
-                sendButtonText.textContent = 'Generating Speech...';
+                setAppState('generating_speech');
                 audioData = await generateTutorAudio(tutorText);
                 
                 // 3. Display message with the data
                 messageElement = displayMessage('model', tutorText, audioData);
                 
-                // 4. Auto-play the audio if available
+                // 4. Auto-play the audio if available (This succeeds because it's after user input)
                 if (audioData && messageElement) {
                     const status = messageElement.querySelector('.tts-status');
                     playTutorAudioUsingContext(audioData.base64Data, audioData.sampleRate, status);
@@ -741,42 +758,68 @@
             }
         });
 
+        // --- Initial Message Click Handler (The User Gesture) ---
+        initialMessageElement.addEventListener('click', async () => {
+            if (isProcessing) return;
+
+            const base64 = initialMessageElement.getAttribute('data-base64-audio');
+            const sampleRate = parseInt(initialMessageElement.getAttribute('data-sample-rate'));
+            const text = initialMessageElement.getAttribute('data-text');
+            const status = initialMessageElement.querySelector('.tts-status');
+
+            stopTutorAudio();
+            
+            // Do nothing if audio is playing or not yet ready
+            if (status.textContent.includes("Playing") || base64 === 'pending' || base64 === 'loading') return; 
+            
+            // Play the audio (This is the user-initiated playback)
+            if (base64 && base64 !== 'unavailable') {
+                playTutorAudioUsingContext(base64, sampleRate, status, true);
+            }
+        });
+
+
         // Initialize on load
         window.onload = () => {
             setAppState('idle'); 
-            const initialMessage = document.getElementById('initial-ai-message');
-            const initialText = initialMessage.getAttribute('data-text');
-            const status = initialMessage.querySelector('.tts-status');
+            const status = initialMessageElement.querySelector('.tts-status');
+            const initialText = initialMessageElement.getAttribute('data-text');
 
-            // Function to handle initial audio generation and automatic playback
+            // Function to handle initial audio generation
             const initializeTutor = async () => {
-                // 1. Update status to show loading is happening
-                status.textContent = "Loading Tutor Voice...";
-                status.classList.add('text-primary');
+                // 1. Generate Audio Data
+                initialMessageElement.setAttribute('data-base64-audio', 'loading'); 
                 
-                // 2. Generate Audio Data
-                initialMessage.setAttribute('data-base64-audio', 'loading'); 
+                // Show generating status
+                status.innerHTML = `<div class="spinner mr-2 w-4 h-4" style="border-top: 4px solid #4F46E5;"></div> Generating Tutor Voice...`;
+                
                 const generatedData = await generateTutorAudio(initialText);
 
+                // 2. Update status and store data
                 if (generatedData) {
-                    initialMessage.setAttribute('data-base64-audio', generatedData.base64Data);
-                    initialMessage.setAttribute('data-sample-rate', generatedData.sampleRate);
+                    initialMessageElement.setAttribute('data-base64-audio', generatedData.base64Data);
+                    initialMessageElement.setAttribute('data-sample-rate', generatedData.sampleRate);
                     
-                    // 3. Auto-play the audio
-                    playTutorAudioUsingContext(generatedData.base64Data, generatedData.sampleRate, status);
+                    // Ready state: prompt user for the required gesture
+                    status.classList.remove('text-secondary', 'flex', 'items-center');
+                    status.classList.add('text-primary'); 
+                    status.innerHTML = `
+                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                        Conversation Ready (Click to Start)
+                    `;
                 } else {
-                    initialMessage.setAttribute('data-base64-audio', 'unavailable');
-                    status.textContent = "Audio unavailable (click to retry).";
-                    status.classList.remove('text-primary');
+                    initialMessageElement.setAttribute('data-base64-audio', 'unavailable');
                     status.classList.add('text-red-600');
+                    status.classList.remove('text-primary');
+                    status.innerHTML = `
+                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                        Voice Unavailable
+                    `;
                 }
             };
 
             // Start the initialization sequence
             initializeTutor();
-
-            // The click listener is still active on the initial message for replay functionality
-            // when the audio has finished playing.
         };
     </script>
 </body>
