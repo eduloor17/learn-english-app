@@ -155,7 +155,7 @@
         let audioPlayer = null; 
         let isReviewing = false; // Tracks user audio playback state
         let currentTutorAudio = null; // Stores the tutor's latest audio Object URL
-
+        
         // Microphone Recording State
         let audioStream = null;
         let mediaRecorder = null;
@@ -243,6 +243,7 @@
                 audioPlayer.pause();
                 // Crucial: remove all event listeners to prevent residual state changes
                 audioPlayer.onended = audioPlayer.onpause = audioPlayer.onerror = null; 
+                audioPlayer.src = ''; // Clear source
                 audioPlayer = null;
             }
             isReviewing = false;
@@ -277,17 +278,19 @@
             cleanupAudioResources(false); 
             
             // Set state and player
-            audioPlayer = new Audio(url);
+            audioPlayer = new Audio(); // FIX: Create Audio element without source
+            audioPlayer.src = url;     // FIX: Explicitly set source property for better mobile compatibility
             isReviewing = isUserReview; 
             setAppState('idle'); 
 
             audioPlayer.onended = audioPlayer.onpause = () => {
                 isReviewing = false;
+                if (audioPlayer) audioPlayer.src = ''; // Clear source
                 audioPlayer = null;
                 // Hide TTS status icon when playback finishes
                 if (statusElement) {
                     statusElement.classList.remove('text-red-600');
-                    statusElement.classList.add('hidden'); 
+                    statusElement.classList.add('text-secondary'); 
                     statusElement.innerHTML = `
                         <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
                         Click to Hear
@@ -298,7 +301,7 @@
             
             audioPlayer.onplay = () => {
                  if (statusElement) {
-                    // Change status to playing (optional, good feedback)
+                    // Change status to playing
                     statusElement.textContent = "Playing...";
                     statusElement.classList.remove('hidden'); 
                  }
@@ -307,27 +310,30 @@
             audioPlayer.onerror = (e) => {
                  console.error("Playback error:", e);
                  errorFeedback.textContent = isUserReview 
-                    ? "Playback error occurred. Try re-recording." 
-                    : `Tutor audio playback failed. Please click the bubble again or check permissions. Error: ${e.message}`;
+                    ? "Playback error occurred with your recording. Try re-recording." 
+                    : `Tutor audio error: File not supported or playback failed. Please try clicking again. (Error: ${e.message})`;
                  errorFeedback.classList.remove('hidden');
                  isReviewing = false;
+                 if (audioPlayer) audioPlayer.src = ''; // Clear source
                  audioPlayer = null;
                  setAppState('idle'); 
             }
 
             audioPlayer.play().catch(e => {
-                // This handles the Autoplay Policy rejection on mobile (the most likely cause)
+                // This handles the Autoplay Policy rejection on mobile (Playback BLOCKED)
                 console.warn("Playback blocked:", e);
                 isReviewing = false;
+                if (audioPlayer) audioPlayer.src = ''; // Clear source
                 audioPlayer = null;
                 setAppState('idle'); 
 
                 if (!isUserReview) {
                     // Critical step: Show the "Click to Hear" prompt if blocked
                     errorFeedback.classList.remove('hidden');
-                    errorFeedback.textContent = "Tutor audio blocked. Click the green message bubble again to force playback.";
+                    errorFeedback.textContent = "Tutor audio blocked by browser policy. Click the green message bubble again to force playback.";
                     if (statusElement) {
                         statusElement.classList.remove('hidden');
+                        statusElement.classList.remove('text-secondary');
                         statusElement.classList.add('text-red-600');
                         statusElement.innerHTML = `
                             <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
@@ -381,7 +387,7 @@
                  content.addEventListener('click', () => {
                     const url = content.getAttribute('data-audio-url');
                     const status = content.querySelector('.tts-status');
-                    if (url && url !== 'pending') {
+                    if (url && url !== 'pending' && url !== 'loading' && url !== 'unavailable') {
                        playAudio(url, false, status);
                     } else if (url === 'loading') {
                        errorFeedback.textContent = "Audio is still being generated. Please wait a moment.";
@@ -403,7 +409,6 @@
 
         /**
          * Sets the application UI state (loading, idle, recording)
-         * ... (rest of setAppState remains the same)
          */
         function setAppState(state) {
             isProcessing = state === 'loading' || state === 'tts_loading' || state === 'processing_audio';
@@ -466,7 +471,6 @@
         
         /**
          * Processes the recorded audio blob for transcription via Gemini.
-         * ... (remains the same)
          */
         async function processAudioForTranscription(audioBlob) {
             setAppState('processing_audio');
