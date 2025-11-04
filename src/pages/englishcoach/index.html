@@ -16,6 +16,7 @@
                         'secondary': '#10B981', // Emerald/Teal
                         'user-bubble': '#EEF2FF', // Indigo 50
                         'ai-bubble': '#D1FAE5', // Emerald 100
+                        'playback': '#3B82F6', // Blue 500
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -97,6 +98,12 @@
         <div id="inputArea" class="mt-auto">
             <textarea id="chatInput" rows="2" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-primary focus:border-primary resize-none mb-2" placeholder="Type your response here or click the microphone..."></textarea>
             
+            <!-- Playback Button for User's Voice (hidden until recording stops) -->
+            <button id="playbackButton" class="w-full mb-2 py-2 px-4 text-white bg-playback hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-playback transition duration-150 rounded-lg shadow-md hidden flex items-center justify-center disabled:opacity-50" disabled>
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                <span id="playbackButtonText">Play My Voice</span>
+            </button>
+            
             <div class="flex space-x-2">
                 <!-- Microphone Button for STT -->
                 <button id="micButton" class="p-3 rounded-lg text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 shadow-md w-1/5 disabled:opacity-50 flex items-center justify-center">
@@ -118,7 +125,7 @@
 
     <script>
         // --- API & Utility Setup ---
-        const API_KEY = "AIzaSyCtYbgN9n3rGzDjB4lfI55KXnl7nMG0_9s"; 
+        const API_KEY = "AIzaSyBipwcguAlhwFcm2KfoMuLY3H7bGylain8"; 
         const LLM_MODEL = 'gemini-2.5-flash-preview-09-2025';
         const LLM_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${API_KEY}`;
         
@@ -139,13 +146,16 @@
         const inputStatus = document.getElementById('inputStatus');
         const errorFeedback = document.getElementById('errorFeedback');
         const initialMessageElement = document.getElementById('initial-ai-message');
+        const playbackButton = document.getElementById('playbackButton');
+        const playbackButtonText = document.getElementById('playbackButtonText');
         
         // State Variables
         let chatHistory = []; 
         let isProcessing = false;
         let isRecording = false;
+        let isPlaybackPlaying = false; // New state for user voice playback
         
-        // Web Audio API State
+        // Web Audio API State (Tutor Voice)
         let tutorAudioContext = null;
         let tutorSourceNode = null;
         let isTutorPlaying = false;
@@ -155,7 +165,8 @@
         let mediaRecorder = null;
         let recordedChunks = []; 
         let recordedBlob = null; 
-        
+        let userPlaybackAudio = null; // Stored user audio element
+
         // --- Audio Utility Functions (for PCM data handling) ---
 
         function base64ToArrayBuffer(base64) {
@@ -182,13 +193,12 @@
                 tutorSourceNode = null;
             }
             if (tutorAudioContext) {
-                 // Clean up context to avoid resource leaks
-                tutorAudioContext.close().catch(e => console.warn("Failed to close AudioContext:", e));
+                 tutorAudioContext.close().catch(e => console.warn("Failed to close AudioContext:", e));
             }
             tutorAudioContext = null;
             isTutorPlaying = false;
 
-            // Reset all TTS status elements to "Click to Hear" when audio is manually stopped
+            // Reset all TTS status elements
             document.querySelectorAll('.tts-status').forEach(statusElement => {
                 if (statusElement.textContent.includes("Playing")) {
                     statusElement.classList.remove('text-primary', 'font-bold', 'flex', 'items-center'); 
@@ -201,7 +211,7 @@
             });
              // Reset initial message status if it was playing
             const initialStatus = initialMessageElement.querySelector('.tts-status');
-            if(initialStatus.textContent.includes("Playing")) {
+            if(initialStatus && initialStatus.textContent.includes("Playing")) {
                 initialStatus.innerHTML = `
                     <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
                     Conversation Ready (Click to Replay)`;
@@ -210,9 +220,21 @@
             }
         }
 
+        /** Stops user's voice playback */
+        function stopUserPlayback() {
+            if (userPlaybackAudio) {
+                userPlaybackAudio.pause();
+                userPlaybackAudio.currentTime = 0;
+            }
+            isPlaybackPlaying = false;
+            playbackButtonText.textContent = 'Play My Voice';
+            playbackButton.disabled = false;
+        }
+
         /** Clears all active audio players and streams. */
         function cleanupAudioResources() {
             stopTutorAudio(); 
+            stopUserPlayback();
              
             // Stop mic stream
             if (audioStream) {
@@ -223,6 +245,11 @@
              if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
             }
+            
+            // Cleanup recorded URL
+            if (recordedBlob && audioUrl) {
+                URL.revokeObjectURL(audioUrl);
+            }
         }
 
         /** Resets all audio/recording related state. */
@@ -230,17 +257,17 @@
             cleanupAudioResources(); 
             recordedChunks = [];
             recordedBlob = null;
+            userPlaybackAudio = null;
+            audioUrl = null;
+            playbackButton.classList.add('hidden'); // Hide playback button
         }
 
         /**
          * Plays raw PCM audio data using the Web Audio API (AudioContext).
-         * @param {string} base64Data - Base64 encoded raw PCM (Int16) data.
-         * @param {number} sampleRate - The sample rate of the audio (e.g., 24000).
-         * @param {HTMLElement} statusElement - Element to show status.
-         * @param {boolean} isInitial - Whether this is the first message (affects replay text).
          */
         function playTutorAudioUsingContext(base64Data, sampleRate, statusElement, isInitial = false) {
-            stopTutorAudio(); // Stop any currently playing audio before starting new one
+            stopTutorAudio(); 
+            stopUserPlayback(); // Ensure user playback is stopped too
 
             // --- UI/Status Update (Pre-playback) ---
             statusElement.textContent = "Loading...";
@@ -253,7 +280,6 @@
                 const pcm16 = new Int16Array(pcmBuffer);
                 
                 // 2. Setup AudioContext and AudioBuffer
-                // Create context inside the user gesture event to bypass autoplay policy
                 tutorAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
                 
                 const audioBuffer = tutorAudioContext.createBuffer(
@@ -277,13 +303,11 @@
                 
                 // 4. Playback and End Handler
                 tutorSourceNode.onended = () => {
-                    // Only reset state if this is the currently playing source
-                    if (tutorSourceNode === this) { 
+                    if (tutorSourceNode) { 
                         isTutorPlaying = false;
                         tutorSourceNode = null; 
                         tutorAudioContext = null;
                         
-                        // Determine the correct replay text
                         const replayText = isInitial ? 'Conversation Ready (Click to Replay)' : 'Click to Hear (Replay)';
                         
                         // Reset status element to 'Click to Hear'
@@ -296,7 +320,6 @@
                     }
                 };
                 
-                // Resume/start context (crucial for ensuring audio starts after a user gesture)
                 if (tutorAudioContext.state === 'suspended') {
                     tutorAudioContext.resume();
                 }
@@ -314,7 +337,7 @@
                 errorFeedback.textContent = `Audio Playback Failed: ${e.message}. Click the message to retry.`;
                 errorFeedback.classList.remove('hidden');
 
-                // Reset status element to 'Click to Hear'
+                // Reset status element to 'Playback Error'
                 statusElement.classList.remove('text-primary', 'flex', 'items-center'); 
                 statusElement.classList.add('text-red-600'); 
                 statusElement.innerHTML = `
@@ -348,14 +371,14 @@
             content.className = `max-w-xs md:max-w-md p-3 rounded-xl ${contentClass} text-gray-800 shadow-sm`;
 
             if (!isUser) {
-                // All AI messages are now set up for click-to-play
+                // AI messages are set up for click-to-play
                 content.classList.add('ai-message-playable');
                 
                 // Store raw data in custom attributes
                 content.setAttribute('data-base64-audio', audioData ? audioData.base64Data : 'unavailable');
                 content.setAttribute('data-sample-rate', audioData ? audioData.sampleRate : 'unavailable');
                 
-                // Status for dynamically generated messages is initially 'Click to Hear (Replay)'
+                // Status for dynamically generated messages
                 let statusClass = 'tts-status text-xs mt-2 text-secondary font-medium';
 
                 content.innerHTML = `
@@ -380,8 +403,7 @@
                     }
 
                     if (isTutorPlaying) {
-                        stopTutorAudio(); // Stop if playing to allow for immediate replay
-                        // If stopping the same message, do not restart
+                        stopTutorAudio(); 
                         if (status.textContent.includes("Playing")) return; 
                     }
                     
@@ -411,6 +433,8 @@
             isProcessing = state === 'loading' || state === 'processing_audio' || state === 'generating_speech';
             isRecording = state === 'recording';
             
+            stopUserPlayback(); // Always stop user playback when state changes
+
             // Send button logic: disabled if processing, recording, or input is empty
             const isSendDisabled = isProcessing || isRecording || chatInput.value.trim() === '';
             sendButton.disabled = isSendDisabled;
@@ -429,33 +453,67 @@
             
             // --- Mic Button Management ---
             micButton.disabled = isProcessing; 
-            micIcon.classList.toggle('hidden', state === 'requesting_mic' || state === 'processing_audio' || state === 'generating_speech');
-            micLoading.classList.toggle('hidden', state !== 'requesting_mic' && state !== 'processing_audio' && state !== 'generating_speech');
+            micIcon.classList.toggle('hidden', state !== 'requesting_mic' && state !== 'processing_audio' && state !== 'generating_speech');
+            micLoading.classList.toggle('hidden', state === 'requesting_mic' || state === 'processing_audio' || state === 'generating_speech');
             micButton.classList.toggle('bg-red-500', !isRecording);
             micButton.classList.toggle('hover:bg-red-600', !isRecording);
             micButton.classList.toggle('bg-primary', isRecording);
             micButton.classList.toggle('hover:bg-indigo-700', isRecording);
             
-            // Adjust send button width
-            sendButton.classList.remove('w-2/5'); 
-            sendButton.classList.add('w-4/5'); 
-
             // --- Status and Error Management ---
             inputStatus.textContent = '';
             errorFeedback.classList.add('hidden');
+            playbackButton.classList.add('hidden'); // Hide playback button by default in new states
             
             if (state === 'recording') {
                 inputStatus.textContent = 'Recording... Click mic to stop.';
                 micIcon.classList.add('animate-pulse-mic');
             } else if (state === 'processing_audio') {
                  inputStatus.textContent = 'Processing your voice...';
+            } else if (state === 'ready_to_send') {
+                 inputStatus.textContent = 'Recording ready. Review or click Send Message.';
+                 playbackButton.classList.remove('hidden');
             } else {
                 micIcon.classList.remove('animate-pulse-mic');
             }
         }
         
         /**
-         * Processes the recorded audio blob for transcription via Gemini.
+         * Plays back the recorded user audio.
+         */
+        function playbackUserAudio() {
+            if (isPlaybackPlaying) {
+                stopUserPlayback();
+                playbackButtonText.textContent = 'Play My Voice';
+                return;
+            }
+
+            if (userPlaybackAudio && recordedBlob) {
+                stopTutorAudio(); // Ensure tutor audio stops
+                
+                isPlaybackPlaying = true;
+                playbackButtonText.textContent = 'Stop Playback...';
+                
+                // Create a temporary audio element if it doesn't exist
+                if (!userPlaybackAudio) {
+                    userPlaybackAudio = new Audio(URL.createObjectURL(recordedBlob));
+                    userPlaybackAudio.onended = () => {
+                        stopUserPlayback();
+                        playbackButtonText.textContent = 'Play My Voice'; // Reset text after finishing
+                    };
+                }
+
+                userPlaybackAudio.play().catch(e => {
+                    console.error("User Playback Error:", e);
+                    errorFeedback.textContent = "Could not play back your recording.";
+                    errorFeedback.classList.remove('hidden');
+                    stopUserPlayback();
+                });
+            }
+        }
+        
+        /**
+         * Processes the recorded audio blob for transcription and prepares the UI.
          */
         async function processAudioForTranscription(audioBlob) {
             setAppState('processing_audio');
@@ -490,21 +548,18 @@
 
                 if (transcript) {
                     chatInput.value = transcript;
-                    sendButton.disabled = false; // Enable send button after transcription
-                    inputStatus.textContent = "Transcription ready. Click 'Send Message' to proceed.";
                 } else {
-                    errorFeedback.textContent = "Could not transcribe audio. Please try recording again.";
+                    errorFeedback.textContent = "Could not transcribe audio. Please review or try recording again.";
                     errorFeedback.classList.remove('hidden');
-                    resetRecordingState();
                 }
 
             } catch (error) {
                 console.error("Transcription Error:", error);
                 errorFeedback.textContent = `Transcription Error: ${error.message}.`;
                 errorFeedback.classList.remove('hidden');
-                resetRecordingState();
             } finally {
-                setAppState('idle');
+                // Transition to 'ready_to_send' regardless of transcription success
+                setAppState('ready_to_send'); 
             }
         }
         
@@ -516,7 +571,7 @@
                 // STOP recording
                 if (mediaRecorder) {
                     mediaRecorder.stop();
-                    setAppState('processing_audio');
+                    setAppState('processing_audio'); // Interim state
                 }
                 return;
             }
@@ -524,14 +579,15 @@
             if (isProcessing) return;
 
             // START recording
-            resetRecordingState();
+            resetRecordingState(); // Clear any previous recordings and UI
             setAppState('requesting_mic'); 
 
             try {
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 recordedChunks = [];
+                chatInput.value = ''; // Clear input before starting
 
-                // Use the highest quality format typically supported by the browser
+                // Use the highest quality format
                 const mimeType = MediaRecorder.isTypeSupported('audio/webm; codecs=opus') 
                     ? 'audio/webm; codecs=opus' 
                     : 'audio/webm';
@@ -548,10 +604,16 @@
                     const finalMimeType = mediaRecorder.mimeType || 'audio/webm'; 
                     recordedBlob = new Blob(recordedChunks, { type: finalMimeType });
                     
-                    processAudioForTranscription(recordedBlob);
-                    
+                    // Create URL for playback before processing
+                    audioUrl = URL.createObjectURL(recordedBlob);
+                    userPlaybackAudio = new Audio(audioUrl);
+
+                    // Stop the stream tracks to release the microphone
                     audioStream.getTracks().forEach(track => track.stop());
                     audioStream = null;
+
+                    // Now process for transcription and prepare UI for playback/send
+                    processAudioForTranscription(recordedBlob);
                 };
 
                 mediaRecorder.start();
@@ -652,14 +714,14 @@
                     throw new Error("Received an empty response from the Language Model.");
                 }
 
-                // 2. Generate Audio Data (Blocking, update status manually for TTS)
+                // 2. Generate Audio Data
                 setAppState('generating_speech');
                 audioData = await generateTutorAudio(tutorText);
                 
                 // 3. Display message with the data
                 messageElement = displayMessage('model', tutorText, audioData);
                 
-                // 4. Auto-play the audio if available (This succeeds because it's after user input)
+                // 4. Auto-play the audio if available
                 if (audioData && messageElement) {
                     const status = messageElement.querySelector('.tts-status');
                     playTutorAudioUsingContext(audioData.base64Data, audioData.sampleRate, status);
@@ -683,7 +745,8 @@
             if (!userText || isProcessing) return;
 
             stopTutorAudio();
-            resetRecordingState();
+            // Important: do NOT call resetRecordingState here, as the audio Blob might still be needed 
+            // if the user recorded their voice. We'll let the user decide if they want to re-record.
 
             displayMessage('user', userText);
 
@@ -691,6 +754,7 @@
 
             chatInput.value = '';
             sendButton.disabled = true;
+            resetRecordingState(); // Now reset the audio resources after the text is consumed
 
             getTutorResponse();
         }
@@ -741,11 +805,14 @@
 
         micButton.addEventListener('click', handleMicClick);
 
+        playbackButton.addEventListener('click', playbackUserAudio); // New listener for playback
+
         sendButton.addEventListener('click', () => {
             sendUserMessage(chatInput.value);
         });
 
         chatInput.addEventListener('input', () => {
+            // Check if recording state allows for immediate send or if transcribed text exists
             sendButton.disabled = chatInput.value.trim() === '' || isProcessing || isRecording;
         });
 
@@ -764,10 +831,10 @@
 
             const base64 = initialMessageElement.getAttribute('data-base64-audio');
             const sampleRate = parseInt(initialMessageElement.getAttribute('data-sample-rate'));
-            const text = initialMessageElement.getAttribute('data-text');
             const status = initialMessageElement.querySelector('.tts-status');
 
             stopTutorAudio();
+            stopUserPlayback();
             
             // Do nothing if audio is playing or not yet ready
             if (status.textContent.includes("Playing") || base64 === 'pending' || base64 === 'loading') return; 
