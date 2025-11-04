@@ -174,7 +174,7 @@
                     tutorSourceNode.stop();
                     tutorSourceNode.disconnect();
                 } catch (e) {
-                    console.warn("Could not stop source node:", e);
+                    // Ignore error if audio is already stopped
                 }
                 tutorSourceNode = null;
             }
@@ -184,6 +184,18 @@
             }
             tutorAudioContext = null;
             isTutorPlaying = false;
+
+            // Reset all TTS status elements to "Click to Hear" when audio is manually stopped
+            document.querySelectorAll('.tts-status').forEach(statusElement => {
+                if (statusElement.textContent === "Playing...") {
+                    statusElement.classList.remove('text-primary', 'font-bold'); 
+                    statusElement.classList.add('text-secondary'); 
+                    statusElement.innerHTML = `
+                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                        Click to Hear
+                    `;
+                }
+            });
         }
 
         /** Clears all active audio players and streams. */
@@ -216,7 +228,7 @@
          * @param {HTMLElement} statusElement - Element to show status.
          */
         function playTutorAudioUsingContext(base64Data, sampleRate, statusElement) {
-            stopTutorAudio(); // Stop any currently playing audio
+            stopTutorAudio(); // Stop any currently playing audio before starting new one
 
             // --- UI/Status Update (Pre-playback) ---
             statusElement.textContent = "Loading...";
@@ -226,25 +238,20 @@
             try {
                 // 1. Decode base64 to raw ArrayBuffer
                 const pcmBuffer = base64ToArrayBuffer(base64Data);
-                // The API returns signed 16-bit PCM, which we treat as a raw buffer
                 const pcm16 = new Int16Array(pcmBuffer);
                 
                 // 2. Setup AudioContext and AudioBuffer
                 tutorAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
                 
-                // Create a buffer for a single channel (mono)
                 const audioBuffer = tutorAudioContext.createBuffer(
                     1, // Mono channel
                     pcm16.length, 
                     sampleRate
                 );
                 
-                // Get the buffer data array
                 const outputData = audioBuffer.getChannelData(0);
                 
-                // Copy the normalized PCM data (from Int16 to Float32)
                 for (let i = 0; i < pcm16.length; i++) {
-                    // Convert signed 16-bit to normalized float (-1.0 to 1.0)
                     outputData[i] = pcm16[i] / 32768; 
                 }
 
@@ -257,17 +264,18 @@
                 
                 // 4. Playback and End Handler
                 tutorSourceNode.onended = () => {
-                    // Only run cleanup if the stop wasn't intentional (e.g., from an error or manual stop)
-                    if (isTutorPlaying) { 
+                    // Only reset state if this is the currently playing source
+                    if (tutorSourceNode === this) { 
                         isTutorPlaying = false;
                         tutorSourceNode = null; 
+                        tutorAudioContext = null;
                         
                         // Reset status element to 'Click to Hear'
-                        statusElement.classList.remove('text-primary'); 
+                        statusElement.classList.remove('text-primary', 'font-bold'); 
                         statusElement.classList.add('text-secondary'); 
                         statusElement.innerHTML = `
                             <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
-                            Click to Hear
+                            Click to Hear (Replay)
                         `;
                     }
                 };
@@ -281,13 +289,13 @@
 
                 // --- UI/Status Update (Playing) ---
                 statusElement.textContent = "Playing...";
-                statusElement.classList.remove('text-primary'); 
+                statusElement.classList.remove('text-secondary', 'font-medium'); 
                 statusElement.classList.add('text-primary', 'font-bold');
 
             } catch (e) {
                 console.error("Web Audio Playback Error:", e);
                 isTutorPlaying = false;
-                errorFeedback.textContent = `Audio Playback Failed: ${e.message}. Please try refreshing.`;
+                errorFeedback.textContent = `Audio Playback Failed: ${e.message}. Click the message to retry.`;
                 errorFeedback.classList.remove('hidden');
 
                 // Reset status element to 'Click to Hear'
@@ -304,6 +312,7 @@
         
         /**
          * Adds a message to the UI and updates the chat history.
+         * @returns {HTMLElement} The newly created message container element.
          */
         function displayMessage(role, text, audioData = null) {
             if (role === 'model') {
@@ -337,10 +346,11 @@
                     <p>${text}</p>
                     <div class="${statusClass}">
                         <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
-                        Click to Hear
+                        Click to Hear (Replay)
                     </div>
                 `;
                 
+                // Add click listener for replay functionality
                  content.addEventListener('click', () => {
                     const base64 = content.getAttribute('data-base64-audio');
                     const sampleRate = parseInt(content.getAttribute('data-sample-rate'));
@@ -353,8 +363,9 @@
                     }
 
                     if (isTutorPlaying) {
-                        // If already playing, stop playback
-                        stopTutorAudio();
+                        stopTutorAudio(); // Stop if playing to allow for immediate replay
+                        // If stopping the same message, do not restart
+                        if (status.textContent.includes("Playing")) return; 
                     }
                     
                     if (base64 && base64 !== 'unavailable') {
@@ -372,25 +383,25 @@
             messageDiv.appendChild(content);
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            return messageDiv;
         }
 
         /**
          * Sets the application UI state (loading, idle, recording)
          */
         function setAppState(state) {
-            isProcessing = state === 'loading' || state === 'tts_loading' || state === 'processing_audio';
+            isProcessing = state === 'loading' || state === 'processing_audio';
             isRecording = state === 'recording';
             
             // Send button logic: disabled if processing, recording, or input is empty
             const isSendDisabled = isProcessing || isRecording || chatInput.value.trim() === '';
             sendButton.disabled = isSendDisabled;
 
-            sendLoading.classList.toggle('hidden', state !== 'loading' && state !== 'tts_loading' && state !== 'processing_audio');
+            sendLoading.classList.toggle('hidden', state !== 'loading' && state !== 'processing_audio');
             
             if (state === 'loading') {
                 sendButtonText.textContent = 'Generating Text...';
-            } else if (state === 'tts_loading') {
-                sendButtonText.textContent = 'Generating Speech...';
             } else if (state === 'processing_audio') {
                 sendButtonText.textContent = 'Transcribing Audio...';
             } else {
@@ -407,7 +418,7 @@
             micButton.classList.toggle('hover:bg-indigo-700', isRecording);
             
             // Adjust send button width
-            sendButton.classList.remove('w-2/5'); // Always full width relative to its container
+            sendButton.classList.remove('w-2/5'); 
             sendButton.classList.add('w-4/5'); 
 
             // --- Status and Error Management ---
@@ -417,8 +428,6 @@
             if (state === 'recording') {
                 inputStatus.textContent = 'Recording... Click mic to stop.';
                 micIcon.classList.add('animate-pulse-mic');
-            } else if (state === 'tts_loading') {
-                 inputStatus.textContent = 'Preparing tutor audio...';
             } else if (state === 'processing_audio') {
                  inputStatus.textContent = 'Processing your voice...';
             } else {
@@ -462,6 +471,7 @@
 
                 if (transcript) {
                     chatInput.value = transcript;
+                    sendButton.disabled = false; // Enable send button after transcription
                     inputStatus.textContent = "Transcription ready. Click 'Send Message' to proceed.";
                 } else {
                     errorFeedback.textContent = "Could not transcribe audio. Please try recording again.";
@@ -538,10 +548,10 @@
         
         /**
          * Calls the TTS API to generate and return the audio data object.
+         * NOTE: This function does not handle UI state (loading spinners).
          * @returns {{base64Data: string, sampleRate: number}|null}
          */
         async function generateTutorAudio(text) {
-            setAppState('tts_loading');
             
             const payload = {
                 contents: [{ parts: [{ text: `Say in a clear, friendly voice: ${text}` }] }],
@@ -579,18 +589,15 @@
                 }
 
             } catch (error) {
+                // Log the error but return null so the LLM chat flow can continue without audio
                 console.error("TTS Error:", error);
-                errorFeedback.textContent = `TTS Error: Could not generate audio. (${error.message})`;
-                errorFeedback.classList.remove('hidden');
                 return null;
-            } finally {
-                setAppState('idle');
             }
         }
 
 
         /**
-         * Generates the LLM response (text) and audio data.
+         * Generates the LLM response (text) and audio data, displays it, and triggers playback.
          */
         async function getTutorResponse() {
             setAppState('loading');
@@ -609,7 +616,12 @@
                 systemInstruction: { parts: [{ text: systemInstruction }] },
             };
 
+            let tutorText;
+            let audioData = null;
+            let messageElement = null;
+
             try {
+                // 1. Get Text Response
                 const response = await fetchWithRetry(LLM_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -617,22 +629,28 @@
                 });
                 
                 const result = await response.json();
-                const tutorText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                tutorText = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 
-                if (tutorText) {
-                    // 1. Generate Audio Data (Blocking, but ensures data exists)
-                    const audioData = await generateTutorAudio(tutorText);
-                    
-                    // 2. Display message with the data
-                    displayMessage('model', tutorText, audioData);
-                    
-                } else {
+                if (!tutorText) {
                     throw new Error("Received an empty response from the Language Model.");
                 }
 
+                // 2. Generate Audio Data (Blocking, update status manually for TTS)
+                sendButtonText.textContent = 'Generating Speech...';
+                audioData = await generateTutorAudio(tutorText);
+                
+                // 3. Display message with the data
+                messageElement = displayMessage('model', tutorText, audioData);
+                
+                // 4. Auto-play the audio if available
+                if (audioData && messageElement) {
+                    const status = messageElement.querySelector('.tts-status');
+                    playTutorAudioUsingContext(audioData.base64Data, audioData.sampleRate, status);
+                }
+                
             } catch (error) {
                 console.error("LLM Error:", error);
-                errorFeedback.textContent = `Error: Could not get a response from the tutor. (${error.message})`;
+                errorFeedback.textContent = `Error: Could not get a response from the tutor. (${error.message}). Audio unavailable.`;
                 errorFeedback.classList.remove('hidden');
                 chatHistory.pop(); 
             } finally {
@@ -647,20 +665,16 @@
             userText = userText.trim();
             if (!userText || isProcessing) return;
 
-            // 1. Clear any recorded audio state, as the message is now sent
+            stopTutorAudio();
             resetRecordingState();
 
-            // 2. Display user message
             displayMessage('user', userText);
 
-            // 3. Add to history
             chatHistory.push({ role: 'user', parts: [{ text: userText }] });
 
-            // 4. Clear input
             chatInput.value = '';
             sendButton.disabled = true;
 
-            // 5. Get AI response (which includes TTS)
             getTutorResponse();
         }
 
@@ -731,35 +745,38 @@
         window.onload = () => {
             setAppState('idle'); 
             const initialMessage = document.getElementById('initial-ai-message');
-            
-            initialMessage.addEventListener('click', async () => {
-                const base64 = initialMessage.getAttribute('data-base64-audio');
-                const sampleRate = parseInt(initialMessage.getAttribute('data-sample-rate'));
-                const status = initialMessage.querySelector('.tts-status');
+            const initialText = initialMessage.getAttribute('data-text');
+            const status = initialMessage.querySelector('.tts-status');
 
-                if (base64 === 'pending') {
-                    // First click: generate audio first.
-                    const initialText = initialMessage.getAttribute('data-text');
-                    initialMessage.setAttribute('data-base64-audio', 'loading'); // Prevent concurrent clicks
-                    const generatedData = await generateTutorAudio(initialText);
+            // Function to handle initial audio generation and automatic playback
+            const initializeTutor = async () => {
+                // 1. Update status to show loading is happening
+                status.textContent = "Loading Tutor Voice...";
+                status.classList.add('text-primary');
+                
+                // 2. Generate Audio Data
+                initialMessage.setAttribute('data-base64-audio', 'loading'); 
+                const generatedData = await generateTutorAudio(initialText);
+
+                if (generatedData) {
+                    initialMessage.setAttribute('data-base64-audio', generatedData.base64Data);
+                    initialMessage.setAttribute('data-sample-rate', generatedData.sampleRate);
                     
-                    if (generatedData) {
-                        initialMessage.setAttribute('data-base64-audio', generatedData.base64Data);
-                        initialMessage.setAttribute('data-sample-rate', generatedData.sampleRate);
-                        playTutorAudioUsingContext(generatedData.base64Data, generatedData.sampleRate, status);
-                    } else {
-                        initialMessage.setAttribute('data-base64-audio', 'unavailable');
-                        status.textContent = "Audio unavailable.";
-                    }
-                } else if (base64 && base64 !== 'loading' && base64 !== 'unavailable') {
-                    // Audio is already generated, just play it.
-                    if (isTutorPlaying) {
-                        stopTutorAudio();
-                    } else {
-                        playTutorAudioUsingContext(base64, sampleRate, status);
-                    }
+                    // 3. Auto-play the audio
+                    playTutorAudioUsingContext(generatedData.base64Data, generatedData.sampleRate, status);
+                } else {
+                    initialMessage.setAttribute('data-base64-audio', 'unavailable');
+                    status.textContent = "Audio unavailable (click to retry).";
+                    status.classList.remove('text-primary');
+                    status.classList.add('text-red-600');
                 }
-            });
+            };
+
+            // Start the initialization sequence
+            initializeTutor();
+
+            // The click listener is still active on the initial message for replay functionality
+            // when the audio has finished playing.
         };
     </script>
 </body>
