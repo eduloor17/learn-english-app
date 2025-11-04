@@ -79,7 +79,7 @@
         <div id="chatContainer" class="chat-container flex-grow p-4 space-y-4 border rounded-lg mb-4 bg-gray-50">
             <!-- Initial AI Message -->
             <div class="flex justify-start">
-                <div id="initial-ai-message" class="ai-message-playable max-w-xs md:max-w-md p-3 rounded-xl rounded-tl-none bg-ai-bubble text-gray-800 shadow-sm" data-text="Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. How can I help you start practicing today?">
+                <div id="initial-ai-message" class="ai-message-playable max-w-xs md:max-w-md p-3 rounded-xl rounded-tl-none bg-ai-bubble text-gray-800 shadow-sm" data-text="Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. How can I help you start practicing today?" data-base64-audio="pending" data-sample-rate="pending">
                     <p class="font-semibold text-secondary mb-1 text-sm">Tutor</p>
                     <p>Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. **How can I help you start practicing today?**</p>
                     <div class="tts-status text-xs mt-2 text-secondary font-medium">
@@ -97,21 +97,13 @@
             
             <div class="flex space-x-2">
                 <!-- Microphone Button for STT -->
-                <button id="micButton" class="flex-shrink-0 p-3 rounded-lg text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 shadow-md w-1/5 disabled:opacity-50 flex items-center justify-center">
+                <button id="micButton" class="p-3 rounded-lg text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 shadow-md w-1/5 disabled:opacity-50 flex items-center justify-center">
                     <svg id="micIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 8c1.66 0 3-1.34 3-3V3c0-1.66-1.34-3-3-3S7 1.34 7 3v2c0 1.66 1.34 3 3 3zm5-5V3c0-1.66 1.34-3 3-3s3 1.34 3 3v2c0 1.66-1.34 3-3 3s-3-1.34-3-3zm-5 13c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3s3-1.34 3-3h2c0 2.76-2.24 5-5 5zm9-5c0 1.66-1.34 3-3 3s-3-1.34-3-3H15zm-14 0h2c0 1.66 1.34 3 3 3s3-1.34 3-3H1z"/></svg>
                     <div id="micLoading" class="spinner hidden"></div>
                 </button>
 
-                <!-- Review/Listen Button -->
-                <button id="reviewButton" class="flex-shrink-0 p-3 rounded-lg bg-secondary hover:bg-emerald-600 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition duration-150 shadow-md w-1/5 disabled:opacity-50 items-center justify-center hidden">
-                    <!-- Play Icon -->
-                    <svg class="w-6 h-6 play-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                    <!-- Pause Icon (Initially hidden) -->
-                    <svg class="w-6 h-6 pause-icon hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM9 8a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                </button>
-
                 <!-- Send Button -->
-                <button id="sendButton" class="flex-grow flex items-center justify-center px-4 py-3 border border-transparent text-lg font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50" disabled>
+                <button id="sendButton" class="flex-grow flex items-center justify-center px-4 py-3 border border-transparent text-lg font-medium rounded-lg text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 shadow-md disabled:opacity-50 w-4/5" disabled>
                     <span id="sendButtonText">Send Message</span>
                     <div id="sendLoading" class="spinner ml-3 hidden"></div>
                 </button>
@@ -137,7 +129,6 @@
         const chatContainer = document.getElementById('chatContainer');
         const chatInput = document.getElementById('chatInput');
         const micButton = document.getElementById('micButton');
-        const reviewButton = document.getElementById('reviewButton'); 
         const sendButton = document.getElementById('sendButton');
         const sendButtonText = document.getElementById('sendButtonText');
         const sendLoading = document.getElementById('sendLoading');
@@ -145,25 +136,24 @@
         const micLoading = document.getElementById('micLoading');
         const inputStatus = document.getElementById('inputStatus');
         const errorFeedback = document.getElementById('errorFeedback');
-        const reviewPlayIcon = reviewButton.querySelector('.play-icon');
-        const reviewPauseIcon = reviewButton.querySelector('.pause-icon');
         
         // State Variables
         let chatHistory = []; 
         let isProcessing = false;
         let isRecording = false;
-        let audioPlayer = null; 
-        let isReviewing = false; // Tracks user audio playback state
-        let currentTutorAudio = null; // Stores the tutor's latest audio Object URL
         
+        // Web Audio API State
+        let tutorAudioContext = null;
+        let tutorSourceNode = null;
+        let isTutorPlaying = false;
+
         // Microphone Recording State
         let audioStream = null;
         let mediaRecorder = null;
         let recordedChunks = []; 
         let recordedBlob = null; 
-        let recordedAudioUrl = null; 
         
-        // --- Audio Utility Functions (for PCM to WAV conversion) ---
+        // --- Audio Utility Functions (for PCM data handling) ---
 
         function base64ToArrayBuffer(base64) {
             const binaryString = atob(base64);
@@ -175,175 +165,139 @@
             return bytes.buffer;
         }
 
-        function writeString(view, offset, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
-        }
-
-        function pcmToWav(pcm16, sampleRate = 24000) {
-            const buffer = new ArrayBuffer(44 + pcm16.length * 2);
-            const view = new DataView(buffer);
-            
-            // RIFF identifier 'RIFF'
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + pcm16.length * 2, true);
-            writeString(view, 8, 'WAVE');
-            
-            // format chunk identifier 'fmt '
-            view.setUint32(12, 0x20746d66, false); // 'fmt '
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true); // sample format (1 for PCM)
-            view.setUint16(22, 1, true); // number of channels
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 1 * 2, true); // byte rate
-            view.setUint16(32, 1 * 2, true); // block align
-            view.setUint16(34, 16, true); // bits per sample
-            
-            // data chunk identifier 'data'
-            view.setUint32(36, 0x61746164, false); // 'data'
-            view.setUint32(40, pcm16.length * 2, true); // data chunk length
-
-            // Write the PCM data
-            let offset = 44;
-            for (let i = 0; i < pcm16.length; i++, offset += 2) {
-                view.setInt16(offset, pcm16[i], true);
-            }
-
-            return new Blob([view], { type: 'audio/wav' });
-        }
-        
-        function blobToBase64(blob) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64String = reader.result.split(',')[1];
-                    resolve(base64String);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        }
-
         // --- Audio State Management ---
 
+        /** Stops any currently playing tutor audio. */
+        function stopTutorAudio() {
+            if (tutorSourceNode) {
+                try {
+                    tutorSourceNode.stop();
+                    tutorSourceNode.disconnect();
+                } catch (e) {
+                    console.warn("Could not stop source node:", e);
+                }
+                tutorSourceNode = null;
+            }
+            if (tutorAudioContext && tutorAudioContext.state !== 'closed') {
+                // Keep context alive but suspended if possible
+                tutorAudioContext.close().catch(e => console.warn("Failed to close AudioContext:", e));
+            }
+            tutorAudioContext = null;
+            isTutorPlaying = false;
+        }
+
         /** Clears all active audio players and streams. */
-        function cleanupAudioResources(revokeTutor = true) {
-             // 1. Stop mic stream
-             if (audioStream) {
+        function cleanupAudioResources() {
+            stopTutorAudio(); 
+             
+            // Stop mic stream
+            if (audioStream) {
                 audioStream.getTracks().forEach(track => track.stop());
                 audioStream = null;
             }
-             // 2. Stop media recorder
+             // Stop media recorder
              if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
-            }
-            // 3. Stop audio playback
-            if (audioPlayer) {
-                audioPlayer.pause();
-                // Crucial: remove all event listeners to prevent residual state changes
-                audioPlayer.onended = audioPlayer.onpause = audioPlayer.onerror = null; 
-                audioPlayer.src = ''; // Clear source
-                audioPlayer = null;
-            }
-            isReviewing = false;
-            // 4. Revoke object URL for tutor audio
-            if (revokeTutor && currentTutorAudio) {
-                 URL.revokeObjectURL(currentTutorAudio);
-                 currentTutorAudio = null;
             }
         }
 
         /** Resets all audio/recording related state. */
         function resetRecordingState() {
-            // Keep the tutor's audio link if it exists (don't revoke currentTutorAudio)
-            cleanupAudioResources(false); 
+            cleanupAudioResources(); 
             recordedChunks = [];
             recordedBlob = null;
-            if (recordedAudioUrl) {
-                URL.revokeObjectURL(recordedAudioUrl);
-                recordedAudioUrl = null;
-            }
-            isReviewing = false;
         }
 
         /**
-         * Generic function to play a given audio URL and update UI state.
-         * @param {string} url - URL of the audio (Object URL or regular URL).
-         * @param {boolean} isUserReview - True if playing user's recorded audio.
-         * @param {HTMLElement} [statusElement] - Element to show status (for blocked TTS).
+         * Plays raw PCM audio data using the Web Audio API (AudioContext).
+         * This bypasses stricter browser checks on Blob URLs.
+         * @param {string} base64Data - Base64 encoded raw PCM (Int16) data.
+         * @param {number} sampleRate - The sample rate of the audio (e.g., 24000).
+         * @param {HTMLElement} statusElement - Element to show status.
          */
-        function playAudio(url, isUserReview, statusElement = null) {
-            // Stop any currently playing audio immediately
-            cleanupAudioResources(false); 
-            
-            // Set state and player
-            audioPlayer = new Audio(); // FIX: Create Audio element without source
-            audioPlayer.src = url;     // FIX: Explicitly set source property for better mobile compatibility
-            isReviewing = isUserReview; 
-            setAppState('idle'); 
+        function playTutorAudioUsingContext(base64Data, sampleRate, statusElement) {
+            stopTutorAudio(); // Stop any currently playing audio
 
-            audioPlayer.onended = audioPlayer.onpause = () => {
-                isReviewing = false;
-                if (audioPlayer) audioPlayer.src = ''; // Clear source
-                audioPlayer = null;
-                // Hide TTS status icon when playback finishes
-                if (statusElement) {
-                    statusElement.classList.remove('text-red-600');
-                    statusElement.classList.add('text-secondary'); 
-                    statusElement.innerHTML = `
-                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
-                        Click to Hear
-                    `;
+            // --- UI/Status Update (Pre-playback) ---
+            statusElement.textContent = "Loading...";
+            statusElement.classList.add('text-primary'); 
+            statusElement.classList.remove('text-secondary');
+
+            try {
+                // 1. Decode base64 to raw ArrayBuffer
+                const pcmBuffer = base64ToArrayBuffer(base64Data);
+                // The API returns signed 16-bit PCM, which we treat as a raw buffer
+                const pcm16 = new Int16Array(pcmBuffer);
+                
+                // 2. Setup AudioContext and AudioBuffer
+                tutorAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
+                
+                // Create a buffer for a single channel (mono)
+                const audioBuffer = tutorAudioContext.createBuffer(
+                    1, // Mono channel
+                    pcm16.length, 
+                    sampleRate
+                );
+                
+                // Get the buffer data array
+                const outputData = audioBuffer.getChannelData(0);
+                
+                // Copy the normalized PCM data (from Int16 to Float32)
+                for (let i = 0; i < pcm16.length; i++) {
+                    // Convert signed 16-bit to normalized float (-1.0 to 1.0)
+                    outputData[i] = pcm16[i] / 32768; 
                 }
-                setAppState('idle'); 
-            };
-            
-            audioPlayer.onplay = () => {
-                 if (statusElement) {
-                    // Change status to playing
-                    statusElement.textContent = "Playing...";
-                    statusElement.classList.remove('hidden'); 
-                 }
-            }
 
-            audioPlayer.onerror = (e) => {
-                 console.error("Playback error:", e);
-                 errorFeedback.textContent = isUserReview 
-                    ? "Playback error occurred with your recording. Try re-recording." 
-                    : `Tutor audio error: File not supported or playback failed. Please try clicking again. (Error: ${e.message})`;
-                 errorFeedback.classList.remove('hidden');
-                 isReviewing = false;
-                 if (audioPlayer) audioPlayer.src = ''; // Clear source
-                 audioPlayer = null;
-                 setAppState('idle'); 
-            }
-
-            audioPlayer.play().catch(e => {
-                // This handles the Autoplay Policy rejection on mobile (Playback BLOCKED)
-                console.warn("Playback blocked:", e);
-                isReviewing = false;
-                if (audioPlayer) audioPlayer.src = ''; // Clear source
-                audioPlayer = null;
-                setAppState('idle'); 
-
-                if (!isUserReview) {
-                    // Critical step: Show the "Click to Hear" prompt if blocked
-                    errorFeedback.classList.remove('hidden');
-                    errorFeedback.textContent = "Tutor audio blocked by browser policy. Click the green message bubble again to force playback.";
-                    if (statusElement) {
-                        statusElement.classList.remove('hidden');
-                        statusElement.classList.remove('text-secondary');
-                        statusElement.classList.add('text-red-600');
+                // 3. Create and configure Source Node
+                tutorSourceNode = tutorAudioContext.createBufferSource();
+                tutorSourceNode.buffer = audioBuffer;
+                tutorSourceNode.connect(tutorAudioContext.destination);
+                
+                isTutorPlaying = true;
+                
+                // 4. Playback and End Handler
+                tutorSourceNode.onended = () => {
+                    // Only run cleanup if the stop wasn't intentional (e.g., from an error or manual stop)
+                    if (isTutorPlaying) { 
+                        isTutorPlaying = false;
+                        tutorSourceNode = null; 
+                        
+                        // Reset status element to 'Click to Hear'
+                        statusElement.classList.remove('text-primary'); 
+                        statusElement.classList.add('text-secondary'); 
                         statusElement.innerHTML = `
                             <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
-                            BLOCKED. Click to Retry.
+                            Click to Hear
                         `;
                     }
-                } else {
-                    inputStatus.textContent = "Playback blocked by browser. Try clicking the review button again.";
+                };
+                
+                // Resume/start context (necessary for some browsers)
+                if (tutorAudioContext.state === 'suspended') {
+                    tutorAudioContext.resume();
                 }
-            });
+
+                tutorSourceNode.start(0); 
+
+                // --- UI/Status Update (Playing) ---
+                statusElement.textContent = "Playing...";
+                statusElement.classList.remove('text-primary'); 
+                statusElement.classList.add('text-primary', 'font-bold');
+
+            } catch (e) {
+                console.error("Web Audio Playback Error:", e);
+                isTutorPlaying = false;
+                errorFeedback.textContent = `Audio Playback Failed: ${e.message}. Please try refreshing.`;
+                errorFeedback.classList.remove('hidden');
+
+                // Reset status element to 'Click to Hear'
+                statusElement.classList.remove('text-primary'); 
+                statusElement.classList.add('text-red-600'); 
+                statusElement.innerHTML = `
+                    <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                    Playback Error
+                `;
+            }
         }
         
         // --- Core Functions ---
@@ -351,7 +305,7 @@
         /**
          * Adds a message to the UI and updates the chat history.
          */
-        function displayMessage(role, text, audioUrl = null) {
+        function displayMessage(role, text, audioData = null) {
             if (role === 'model') {
                 chatHistory.push({ role: 'model', parts: [{ text }] });
             }
@@ -371,9 +325,11 @@
             if (!isUser) {
                 // All AI messages are now set up for click-to-play
                 content.classList.add('ai-message-playable');
-                content.setAttribute('data-audio-url', audioUrl || 'pending');
                 
-                // Show the "Click to Hear" icon by default
+                // Store raw data in custom attributes
+                content.setAttribute('data-base64-audio', audioData ? audioData.base64Data : 'unavailable');
+                content.setAttribute('data-sample-rate', audioData ? audioData.sampleRate : 'unavailable');
+                
                 let statusClass = 'tts-status text-xs mt-2 text-secondary font-medium';
 
                 content.innerHTML = `
@@ -384,14 +340,25 @@
                         Click to Hear
                     </div>
                 `;
+                
                  content.addEventListener('click', () => {
-                    const url = content.getAttribute('data-audio-url');
+                    const base64 = content.getAttribute('data-base64-audio');
+                    const sampleRate = parseInt(content.getAttribute('data-sample-rate'));
                     const status = content.querySelector('.tts-status');
-                    if (url && url !== 'pending' && url !== 'loading' && url !== 'unavailable') {
-                       playAudio(url, false, status);
-                    } else if (url === 'loading') {
-                       errorFeedback.textContent = "Audio is still being generated. Please wait a moment.";
-                       errorFeedback.classList.remove('hidden');
+
+                    if (base64 === 'loading') {
+                        errorFeedback.textContent = "Audio is still being generated. Please wait a moment.";
+                        errorFeedback.classList.remove('hidden');
+                        return;
+                    }
+
+                    if (isTutorPlaying) {
+                        // If already playing, stop playback
+                        stopTutorAudio();
+                    }
+                    
+                    if (base64 && base64 !== 'unavailable') {
+                       playTutorAudioUsingContext(base64, sampleRate, status);
                     }
                 });
 
@@ -414,8 +381,8 @@
             isProcessing = state === 'loading' || state === 'tts_loading' || state === 'processing_audio';
             isRecording = state === 'recording';
             
-            // Send button logic: disabled if processing, recording, reviewing, or input is empty
-            const isSendDisabled = isProcessing || isRecording || isReviewing || chatInput.value.trim() === '';
+            // Send button logic: disabled if processing, recording, or input is empty
+            const isSendDisabled = isProcessing || isRecording || chatInput.value.trim() === '';
             sendButton.disabled = isSendDisabled;
 
             sendLoading.classList.toggle('hidden', state !== 'loading' && state !== 'tts_loading' && state !== 'processing_audio');
@@ -431,7 +398,7 @@
             }
             
             // --- Mic Button Management ---
-            micButton.disabled = isProcessing || isReviewing; 
+            micButton.disabled = isProcessing; 
             micIcon.classList.toggle('hidden', state === 'requesting_mic' || state === 'processing_audio');
             micLoading.classList.toggle('hidden', state !== 'requesting_mic' && state !== 'processing_audio');
             micButton.classList.toggle('bg-red-500', !isRecording);
@@ -439,19 +406,9 @@
             micButton.classList.toggle('bg-primary', isRecording);
             micButton.classList.toggle('hover:bg-indigo-700', isRecording);
             
-            // --- Review Button Management ---
-            const hasRecordedAudio = recordedBlob !== null && !isRecording;
-            reviewButton.classList.toggle('hidden', !hasRecordedAudio);
-            reviewButton.disabled = isProcessing || isRecording;
-            reviewButton.style.display = hasRecordedAudio ? 'flex' : 'none';
-
-            // Show appropriate review icon (Play/Pause)
-            reviewPlayIcon.classList.toggle('hidden', isReviewing);
-            reviewPauseIcon.classList.toggle('hidden', !isReviewing);
-
             // Adjust send button width
-            sendButton.classList.toggle('w-4/5', !hasRecordedAudio);
-            sendButton.classList.toggle('w-2/5', hasRecordedAudio);
+            sendButton.classList.remove('w-2/5'); // Always full width relative to its container
+            sendButton.classList.add('w-4/5'); 
 
             // --- Status and Error Management ---
             inputStatus.textContent = '';
@@ -505,7 +462,7 @@
 
                 if (transcript) {
                     chatInput.value = transcript;
-                    inputStatus.textContent = "Transcription ready. Review your audio or click 'Send Message'.";
+                    inputStatus.textContent = "Transcription ready. Click 'Send Message' to proceed.";
                 } else {
                     errorFeedback.textContent = "Could not transcribe audio. Please try recording again.";
                     errorFeedback.classList.remove('hidden');
@@ -535,7 +492,7 @@
                 return;
             }
 
-            if (isProcessing || isReviewing) return;
+            if (isProcessing) return;
 
             // START recording
             resetRecordingState();
@@ -545,8 +502,12 @@
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 recordedChunks = [];
 
-                // Allowing the browser to choose the best supported MIME type
-                mediaRecorder = new MediaRecorder(audioStream);
+                // Use the highest quality format typically supported by the browser
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm; codecs=opus') 
+                    ? 'audio/webm; codecs=opus' 
+                    : 'audio/webm';
+                    
+                mediaRecorder = new MediaRecorder(audioStream, { mimeType });
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
@@ -555,10 +516,8 @@
                 };
 
                 mediaRecorder.onstop = () => {
-                    // Use the mimeType reported by the MediaRecorder which the browser chose
                     const finalMimeType = mediaRecorder.mimeType || 'audio/webm'; 
                     recordedBlob = new Blob(recordedChunks, { type: finalMimeType });
-                    recordedAudioUrl = URL.createObjectURL(recordedBlob);
                     
                     processAudioForTranscription(recordedBlob);
                     
@@ -578,24 +537,8 @@
         }
         
         /**
-         * Handles the Review/Listen button click (user audio playback).
-         */
-        function handleReviewClick() {
-            if (!recordedAudioUrl || isProcessing || isRecording) return;
-            
-            // If currently playing the user review, stop it.
-            if (isReviewing) {
-                if (audioPlayer) audioPlayer.pause();
-                return; 
-            }
-            
-            // Start playback using the unified playAudio function
-            playAudio(recordedAudioUrl, true);
-        }
-
-        /**
-         * Calls the TTS API to generate and return the audio URL (no immediate playback).
-         * @returns {string|null} The generated object URL or null on failure.
+         * Calls the TTS API to generate and return the audio data object.
+         * @returns {{base64Data: string, sampleRate: number}|null}
          */
         async function generateTutorAudio(text) {
             setAppState('tts_loading');
@@ -629,14 +572,7 @@
                     const rateMatch = mimeType.match(/rate=(\d+)/);
                     const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
                     
-                    const pcmData = base64ToArrayBuffer(audioData);
-                    const pcm16 = new Int16Array(pcmData);
-                    const wavBlob = pcmToWav(pcm16, sampleRate);
-                    
-                    // Revoke old URL and set new one
-                    if (currentTutorAudio) URL.revokeObjectURL(currentTutorAudio);
-                    currentTutorAudio = URL.createObjectURL(wavBlob);
-                    return currentTutorAudio;
+                    return { base64Data: audioData, sampleRate };
 
                 } else {
                     throw new Error("TTS response was incomplete or format was wrong.");
@@ -654,7 +590,7 @@
 
 
         /**
-         * Generates the LLM response (text) and audio URL.
+         * Generates the LLM response (text) and audio data.
          */
         async function getTutorResponse() {
             setAppState('loading');
@@ -684,11 +620,11 @@
                 const tutorText = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 
                 if (tutorText) {
-                    // 1. Generate Audio URL (Blocking, but ensures data exists)
-                    const audioUrl = await generateTutorAudio(tutorText);
+                    // 1. Generate Audio Data (Blocking, but ensures data exists)
+                    const audioData = await generateTutorAudio(tutorText);
                     
-                    // 2. Display message with the URL
-                    displayMessage('model', tutorText, audioUrl);
+                    // 2. Display message with the data
+                    displayMessage('model', tutorText, audioData);
                     
                 } else {
                     throw new Error("Received an empty response from the Language Model.");
@@ -709,7 +645,7 @@
          */
         function sendUserMessage(userText) {
             userText = userText.trim();
-            if (!userText || isProcessing || isReviewing) return;
+            if (!userText || isProcessing) return;
 
             // 1. Clear any recorded audio state, as the message is now sent
             resetRecordingState();
@@ -728,7 +664,7 @@
             getTutorResponse();
         }
 
-        // --- UTILITIES (fetchWithRetry remains the same) ---
+        // --- UTILITIES ---
 
         async function fetchWithRetry(url, options, maxRetries = 5) {
             for (let i = 0; i < maxRetries; i++) {
@@ -755,19 +691,31 @@
             }
             throw new Error("Exceeded maximum retries.");
         }
+        
+        // Converts Blob to Base64 for the Gemini API
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64String = reader.result.split(',')[1];
+                    resolve(base64String);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
 
 
         // --- Event Listeners ---
 
         micButton.addEventListener('click', handleMicClick);
-        reviewButton.addEventListener('click', handleReviewClick); 
 
         sendButton.addEventListener('click', () => {
             sendUserMessage(chatInput.value);
         });
 
         chatInput.addEventListener('input', () => {
-            sendButton.disabled = chatInput.value.trim() === '' || isProcessing || isRecording || isReviewing;
+            sendButton.disabled = chatInput.value.trim() === '' || isProcessing || isRecording;
         });
 
         chatInput.addEventListener('keydown', (e) => {
@@ -782,29 +730,34 @@
         // Initialize on load
         window.onload = () => {
             setAppState('idle'); 
-            // We now rely on the user clicking the initial message to trigger audio generation/playback.
             const initialMessage = document.getElementById('initial-ai-message');
             
             initialMessage.addEventListener('click', async () => {
-                const url = initialMessage.getAttribute('data-audio-url');
+                const base64 = initialMessage.getAttribute('data-base64-audio');
+                const sampleRate = parseInt(initialMessage.getAttribute('data-sample-rate'));
                 const status = initialMessage.querySelector('.tts-status');
 
-                if (url === 'pending') {
-                    // This is the first click: generate audio first.
+                if (base64 === 'pending') {
+                    // First click: generate audio first.
                     const initialText = initialMessage.getAttribute('data-text');
-                    initialMessage.setAttribute('data-audio-url', 'loading'); // Prevent concurrent clicks
-                    const generatedUrl = await generateTutorAudio(initialText);
+                    initialMessage.setAttribute('data-base64-audio', 'loading'); // Prevent concurrent clicks
+                    const generatedData = await generateTutorAudio(initialText);
                     
-                    if (generatedUrl) {
-                        initialMessage.setAttribute('data-audio-url', generatedUrl);
-                        playAudio(generatedUrl, false, status);
+                    if (generatedData) {
+                        initialMessage.setAttribute('data-base64-audio', generatedData.base64Data);
+                        initialMessage.setAttribute('data-sample-rate', generatedData.sampleRate);
+                        playTutorAudioUsingContext(generatedData.base64Data, generatedData.sampleRate, status);
                     } else {
-                        initialMessage.setAttribute('data-audio-url', 'unavailable');
+                        initialMessage.setAttribute('data-base64-audio', 'unavailable');
                         status.textContent = "Audio unavailable.";
                     }
-                } else if (url && url !== 'loading' && url !== 'unavailable') {
+                } else if (base64 && base64 !== 'loading' && base64 !== 'unavailable') {
                     // Audio is already generated, just play it.
-                    playAudio(url, false, status);
+                    if (isTutorPlaying) {
+                        stopTutorAudio();
+                    } else {
+                        playTutorAudioUsingContext(base64, sampleRate, status);
+                    }
                 }
             });
         };
