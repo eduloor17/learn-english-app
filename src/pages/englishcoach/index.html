@@ -63,6 +63,10 @@
                 transform: scale(1.05);
             }
         }
+        .ai-message-playable {
+            cursor: pointer;
+            position: relative;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4 font-sans">
@@ -75,9 +79,13 @@
         <div id="chatContainer" class="chat-container flex-grow p-4 space-y-4 border rounded-lg mb-4 bg-gray-50">
             <!-- Initial AI Message -->
             <div class="flex justify-start">
-                <div class="max-w-xs md:max-w-md p-3 rounded-xl rounded-tl-none bg-ai-bubble text-gray-800 shadow-sm">
+                <div id="initial-ai-message" class="ai-message-playable max-w-xs md:max-w-md p-3 rounded-xl rounded-tl-none bg-ai-bubble text-gray-800 shadow-sm" data-text="Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. How can I help you start practicing today?">
                     <p class="font-semibold text-secondary mb-1 text-sm">Tutor</p>
                     <p>Hello! I'm here to help you practice your English conversation skills. Feel free to start a discussion about anything—hobbies, news, travel, or just your day. **How can I help you start practicing today?**</p>
+                    <div class="tts-status text-xs mt-2 text-secondary font-medium">
+                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                        Click to Hear
+                    </div>
                 </div>
             </div>
             <!-- Dynamic Messages will be appended here -->
@@ -96,7 +104,10 @@
 
                 <!-- Review/Listen Button -->
                 <button id="reviewButton" class="flex-shrink-0 p-3 rounded-lg bg-secondary hover:bg-emerald-600 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition duration-150 shadow-md w-1/5 disabled:opacity-50 items-center justify-center hidden">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                    <!-- Play Icon -->
+                    <svg class="w-6 h-6 play-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                    <!-- Pause Icon (Initially hidden) -->
+                    <svg class="w-6 h-6 pause-icon hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM9 8a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
                 </button>
 
                 <!-- Send Button -->
@@ -126,7 +137,7 @@
         const chatContainer = document.getElementById('chatContainer');
         const chatInput = document.getElementById('chatInput');
         const micButton = document.getElementById('micButton');
-        const reviewButton = document.getElementById('reviewButton'); // New Element
+        const reviewButton = document.getElementById('reviewButton'); 
         const sendButton = document.getElementById('sendButton');
         const sendButtonText = document.getElementById('sendButtonText');
         const sendLoading = document.getElementById('sendLoading');
@@ -134,24 +145,26 @@
         const micLoading = document.getElementById('micLoading');
         const inputStatus = document.getElementById('inputStatus');
         const errorFeedback = document.getElementById('errorFeedback');
+        const reviewPlayIcon = reviewButton.querySelector('.play-icon');
+        const reviewPauseIcon = reviewButton.querySelector('.pause-icon');
         
         // State Variables
         let chatHistory = []; 
         let isProcessing = false;
         let isRecording = false;
         let audioPlayer = null; 
+        let isReviewing = false; // Tracks user audio playback state
+        let currentTutorAudio = null; // Stores the tutor's latest audio Object URL
 
         // Microphone Recording State
-        let mediaRecorder = null;
         let audioStream = null;
-        let recordedChunks = []; // To store the recorded audio data chunks
-        let recordedBlob = null; // Final audio Blob
-        let recordedAudioUrl = null; // URL for playback
-        let isReviewing = false;
+        let mediaRecorder = null;
+        let recordedChunks = []; 
+        let recordedBlob = null; 
+        let recordedAudioUrl = null; 
         
         // --- Audio Utility Functions (for PCM to WAV conversion) ---
 
-        /** Converts Base64 string to ArrayBuffer. */
         function base64ToArrayBuffer(base64) {
             const binaryString = atob(base64);
             const len = binaryString.length;
@@ -162,44 +175,34 @@
             return bytes.buffer;
         }
 
-        /** Helper to write strings into DataView (for WAV header). */
         function writeString(view, offset, string) {
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
             }
         }
 
-        /** Converts raw signed 16-bit PCM data to a WAV Blob. */
         function pcmToWav(pcm16, sampleRate = 24000) {
             const buffer = new ArrayBuffer(44 + pcm16.length * 2);
             const view = new DataView(buffer);
             
             // RIFF identifier 'RIFF'
             writeString(view, 0, 'RIFF');
-            // File size (36 + data size)
             view.setUint32(4, 36 + pcm16.length * 2, true);
-            // RIFF type 'WAVE'
             writeString(view, 8, 'WAVE');
+            
             // format chunk identifier 'fmt '
             view.setUint32(12, 0x20746d66, false); // 'fmt '
-            // format chunk length (16 for PCM)
             view.setUint32(16, 16, true);
-            // sample format (1 for PCM)
-            view.setUint16(20, 1, true);
-            // number of channels
-            view.setUint16(22, 1, true); 
-            // sample rate
+            view.setUint16(20, 1, true); // sample format (1 for PCM)
+            view.setUint16(22, 1, true); // number of channels
             view.setUint32(24, sampleRate, true);
-            // byte rate (SampleRate * NumChannels * BitsPerSample/8)
-            view.setUint32(28, sampleRate * 1 * 2, true); 
-            // block align (NumChannels * BitsPerSample/8)
-            view.setUint16(32, 1 * 2, true);
-            // bits per sample
-            view.setUint16(34, 16, true);
+            view.setUint32(28, sampleRate * 1 * 2, true); // byte rate
+            view.setUint16(32, 1 * 2, true); // block align
+            view.setUint16(34, 16, true); // bits per sample
+            
             // data chunk identifier 'data'
             view.setUint32(36, 0x61746164, false); // 'data'
-            // data chunk length (size of the audio data)
-            view.setUint32(40, pcm16.length * 2, true);
+            view.setUint32(40, pcm16.length * 2, true); // data chunk length
 
             // Write the PCM data
             let offset = 44;
@@ -210,12 +213,10 @@
             return new Blob([view], { type: 'audio/wav' });
         }
         
-        /** Converts Blob to Base64 */
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    // Extract base64 part (after "data:audio/webm;base64,")
                     const base64String = reader.result.split(',')[1];
                     resolve(base64String);
                 };
@@ -224,12 +225,127 @@
             });
         }
 
+        // --- Audio State Management ---
+
+        /** Clears all active audio players and streams. */
+        function cleanupAudioResources(revokeTutor = true) {
+             // 1. Stop mic stream
+             if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+             // 2. Stop media recorder
+             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            // 3. Stop audio playback
+            if (audioPlayer) {
+                audioPlayer.pause();
+                // Crucial: remove all event listeners to prevent residual state changes
+                audioPlayer.onended = audioPlayer.onpause = audioPlayer.onerror = null; 
+                audioPlayer = null;
+            }
+            isReviewing = false;
+            // 4. Revoke object URL for tutor audio
+            if (revokeTutor && currentTutorAudio) {
+                 URL.revokeObjectURL(currentTutorAudio);
+                 currentTutorAudio = null;
+            }
+        }
+
+        /** Resets all audio/recording related state. */
+        function resetRecordingState() {
+            // Keep the tutor's audio link if it exists (don't revoke currentTutorAudio)
+            cleanupAudioResources(false); 
+            recordedChunks = [];
+            recordedBlob = null;
+            if (recordedAudioUrl) {
+                URL.revokeObjectURL(recordedAudioUrl);
+                recordedAudioUrl = null;
+            }
+            isReviewing = false;
+        }
+
+        /**
+         * Generic function to play a given audio URL and update UI state.
+         * @param {string} url - URL of the audio (Object URL or regular URL).
+         * @param {boolean} isUserReview - True if playing user's recorded audio.
+         * @param {HTMLElement} [statusElement] - Element to show status (for blocked TTS).
+         */
+        function playAudio(url, isUserReview, statusElement = null) {
+            // Stop any currently playing audio immediately
+            cleanupAudioResources(false); 
+            
+            // Set state and player
+            audioPlayer = new Audio(url);
+            isReviewing = isUserReview; 
+            setAppState('idle'); 
+
+            audioPlayer.onended = audioPlayer.onpause = () => {
+                isReviewing = false;
+                audioPlayer = null;
+                // Hide TTS status icon when playback finishes
+                if (statusElement) {
+                    statusElement.classList.remove('text-red-600');
+                    statusElement.classList.add('hidden'); 
+                    statusElement.innerHTML = `
+                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                        Click to Hear
+                    `;
+                }
+                setAppState('idle'); 
+            };
+            
+            audioPlayer.onplay = () => {
+                 if (statusElement) {
+                    // Change status to playing (optional, good feedback)
+                    statusElement.textContent = "Playing...";
+                    statusElement.classList.remove('hidden'); 
+                 }
+            }
+
+            audioPlayer.onerror = (e) => {
+                 console.error("Playback error:", e);
+                 errorFeedback.textContent = isUserReview 
+                    ? "Playback error occurred. Try re-recording." 
+                    : `Tutor audio playback failed. Please click the bubble again or check permissions. Error: ${e.message}`;
+                 errorFeedback.classList.remove('hidden');
+                 isReviewing = false;
+                 audioPlayer = null;
+                 setAppState('idle'); 
+            }
+
+            audioPlayer.play().catch(e => {
+                // This handles the Autoplay Policy rejection on mobile (the most likely cause)
+                console.warn("Playback blocked:", e);
+                isReviewing = false;
+                audioPlayer = null;
+                setAppState('idle'); 
+
+                if (!isUserReview) {
+                    // Critical step: Show the "Click to Hear" prompt if blocked
+                    errorFeedback.classList.remove('hidden');
+                    errorFeedback.textContent = "Tutor audio blocked. Click the green message bubble again to force playback.";
+                    if (statusElement) {
+                        statusElement.classList.remove('hidden');
+                        statusElement.classList.add('text-red-600');
+                        statusElement.innerHTML = `
+                            <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                            BLOCKED. Click to Retry.
+                        `;
+                    }
+                } else {
+                    inputStatus.textContent = "Playback blocked by browser. Try clicking the review button again.";
+                }
+            });
+        }
+        
         // --- Core Functions ---
         
         /**
          * Adds a message to the UI and updates the chat history.
          */
-        function displayMessage(role, text) {
+        function displayMessage(role, text, audioUrl = null) {
             if (role === 'model') {
                 chatHistory.push({ role: 'model', parts: [{ text }] });
             }
@@ -243,28 +359,60 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex ${bubbleClass}`;
             
-            messageDiv.innerHTML = `
-                <div class="max-w-xs md:max-w-md p-3 rounded-xl ${contentClass} text-gray-800 shadow-sm">
+            const content = document.createElement('div');
+            content.className = `max-w-xs md:max-w-md p-3 rounded-xl ${contentClass} text-gray-800 shadow-sm`;
+
+            if (!isUser) {
+                // All AI messages are now set up for click-to-play
+                content.classList.add('ai-message-playable');
+                content.setAttribute('data-audio-url', audioUrl || 'pending');
+                
+                // Show the "Click to Hear" icon by default
+                let statusClass = 'tts-status text-xs mt-2 text-secondary font-medium';
+
+                content.innerHTML = `
                     <p class="font-semibold ${roleColor} mb-1 text-sm">${roleText}</p>
                     <p>${text}</p>
-                </div>
-            `;
-            
+                    <div class="${statusClass}">
+                        <svg class="w-4 h-4 inline-block mr-1 align-sub" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.383 3.013A1 1 0 0110 3v14a1 1 0 01-1.383.987l-6-3a1 1 0 01-.617-.922V5.935a1 1 0 01.617-.922l6-3z" clip-rule="evenodd"></path></svg>
+                        Click to Hear
+                    </div>
+                `;
+                 content.addEventListener('click', () => {
+                    const url = content.getAttribute('data-audio-url');
+                    const status = content.querySelector('.tts-status');
+                    if (url && url !== 'pending') {
+                       playAudio(url, false, status);
+                    } else if (url === 'loading') {
+                       errorFeedback.textContent = "Audio is still being generated. Please wait a moment.";
+                       errorFeedback.classList.remove('hidden');
+                    }
+                });
+
+            } else {
+                 content.innerHTML = `
+                    <p class="font-semibold ${roleColor} mb-1 text-sm">${roleText}</p>
+                    <p>${text}</p>
+                `;
+            }
+
+            messageDiv.appendChild(content);
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         /**
          * Sets the application UI state (loading, idle, recording)
-         * @param {string} state 
+         * ... (rest of setAppState remains the same)
          */
         function setAppState(state) {
             isProcessing = state === 'loading' || state === 'tts_loading' || state === 'processing_audio';
             isRecording = state === 'recording';
             
-            // --- Input and Send Button Management ---
-            chatInput.disabled = isProcessing || isRecording;
-            sendButton.disabled = isProcessing || isRecording || chatInput.value.trim() === '';
+            // Send button logic: disabled if processing, recording, reviewing, or input is empty
+            const isSendDisabled = isProcessing || isRecording || isReviewing || chatInput.value.trim() === '';
+            sendButton.disabled = isSendDisabled;
+
             sendLoading.classList.toggle('hidden', state !== 'loading' && state !== 'tts_loading' && state !== 'processing_audio');
             
             if (state === 'loading') {
@@ -278,7 +426,7 @@
             }
             
             // --- Mic Button Management ---
-            micButton.disabled = isProcessing || isReviewing;
+            micButton.disabled = isProcessing || isReviewing; 
             micIcon.classList.toggle('hidden', state === 'requesting_mic' || state === 'processing_audio');
             micLoading.classList.toggle('hidden', state !== 'requesting_mic' && state !== 'processing_audio');
             micButton.classList.toggle('bg-red-500', !isRecording);
@@ -286,13 +434,17 @@
             micButton.classList.toggle('bg-primary', isRecording);
             micButton.classList.toggle('hover:bg-indigo-700', isRecording);
             
-            // --- Review Button Management (Show only when audio is recorded and transcription is done) ---
-            const hasRecordedAudio = recordedBlob !== null;
+            // --- Review Button Management ---
+            const hasRecordedAudio = recordedBlob !== null && !isRecording;
             reviewButton.classList.toggle('hidden', !hasRecordedAudio);
             reviewButton.disabled = isProcessing || isRecording;
             reviewButton.style.display = hasRecordedAudio ? 'flex' : 'none';
 
-            // If audio is present, increase send button size to fill remaining space
+            // Show appropriate review icon (Play/Pause)
+            reviewPlayIcon.classList.toggle('hidden', isReviewing);
+            reviewPauseIcon.classList.toggle('hidden', !isReviewing);
+
+            // Adjust send button width
             sendButton.classList.toggle('w-4/5', !hasRecordedAudio);
             sendButton.classList.toggle('w-2/5', hasRecordedAudio);
 
@@ -304,7 +456,7 @@
                 inputStatus.textContent = 'Recording... Click mic to stop.';
                 micIcon.classList.add('animate-pulse-mic');
             } else if (state === 'tts_loading') {
-                 inputStatus.textContent = 'Preparing audio...';
+                 inputStatus.textContent = 'Preparing tutor audio...';
             } else if (state === 'processing_audio') {
                  inputStatus.textContent = 'Processing your voice...';
             } else {
@@ -313,35 +465,8 @@
         }
         
         /**
-         * Resets all audio/recording related state.
-         */
-        function resetRecordingState() {
-            cleanupAudioResources();
-            recordedChunks = [];
-            recordedBlob = null;
-            recordedAudioUrl = null;
-            isReviewing = false;
-        }
-
-        /**
-         * Clears all active audio resources.
-         */
-        function cleanupAudioResources() {
-             if (audioStream) {
-                audioStream.getTracks().forEach(track => track.stop());
-                audioStream = null;
-            }
-             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            if (audioPlayer) {
-                audioPlayer.pause();
-                audioPlayer = null;
-            }
-        }
-
-        /**
          * Processes the recorded audio blob for transcription via Gemini.
+         * ... (remains the same)
          */
         async function processAudioForTranscription(audioBlob) {
             setAppState('processing_audio');
@@ -376,7 +501,7 @@
 
                 if (transcript) {
                     chatInput.value = transcript;
-                    inputStatus.textContent = "Transcription ready. Review your audio or send the message.";
+                    inputStatus.textContent = "Transcription ready. Review your audio or click 'Send Message'.";
                 } else {
                     errorFeedback.textContent = "Could not transcribe audio. Please try recording again.";
                     errorFeedback.classList.remove('hidden');
@@ -406,7 +531,7 @@
                 return;
             }
 
-            if (isProcessing) return;
+            if (isProcessing || isReviewing) return;
 
             // START recording
             resetRecordingState();
@@ -416,21 +541,23 @@
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 recordedChunks = [];
 
+                // Allowing the browser to choose the best supported MIME type
                 mediaRecorder = new MediaRecorder(audioStream);
 
                 mediaRecorder.ondataavailable = (event) => {
-                    recordedChunks.push(event.data);
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
                 };
 
                 mediaRecorder.onstop = () => {
-                    // 1. Create the Blob for playback/API
-                    recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    // Use the mimeType reported by the MediaRecorder which the browser chose
+                    const finalMimeType = mediaRecorder.mimeType || 'audio/webm'; 
+                    recordedBlob = new Blob(recordedChunks, { type: finalMimeType });
                     recordedAudioUrl = URL.createObjectURL(recordedBlob);
                     
-                    // 2. Transcribe the audio
                     processAudioForTranscription(recordedBlob);
                     
-                    // 3. Cleanup stream resources (recorder will be stopped by stop() call)
                     audioStream.getTracks().forEach(track => track.stop());
                     audioStream = null;
                 };
@@ -440,19 +567,35 @@
 
             } catch (err) {
                 console.error('Microphone access denied or error:', err);
-                errorFeedback.textContent = "Microphone access denied. Please allow it and try again.";
+                errorFeedback.textContent = "Microphone access denied or device error. Please check permissions.";
                 errorFeedback.classList.remove('hidden');
                 setAppState('idle'); 
             }
         }
+        
+        /**
+         * Handles the Review/Listen button click (user audio playback).
+         */
+        function handleReviewClick() {
+            if (!recordedAudioUrl || isProcessing || isRecording) return;
+            
+            // If currently playing the user review, stop it.
+            if (isReviewing) {
+                if (audioPlayer) audioPlayer.pause();
+                return; 
+            }
+            
+            // Start playback using the unified playAudio function
+            playAudio(recordedAudioUrl, true);
+        }
 
         /**
-         * Calls the TTS API to generate and play audio for the tutor's response.
+         * Calls the TTS API to generate and return the audio URL (no immediate playback).
+         * @returns {string|null} The generated object URL or null on failure.
          */
-        async function playTutorAudio(text) {
+        async function generateTutorAudio(text) {
             setAppState('tts_loading');
-            cleanupAudioResources(); 
-
+            
             const payload = {
                 contents: [{ parts: [{ text: `Say in a clear, friendly voice: ${text}` }] }],
                 generationConfig: {
@@ -486,26 +629,10 @@
                     const pcm16 = new Int16Array(pcmData);
                     const wavBlob = pcmToWav(pcm16, sampleRate);
                     
-                    const audioUrl = URL.createObjectURL(wavBlob);
-                    audioPlayer = new Audio(audioUrl);
-                    
-                    audioPlayer.onended = () => {
-                        setAppState('idle');
-                        URL.revokeObjectURL(audioUrl);
-                        audioPlayer = null;
-                    };
-
-                    audioPlayer.onerror = (e) => {
-                         console.error("Audio playback error:", e);
-                         errorFeedback.textContent = "Tutor audio playback failed.";
-                         errorFeedback.classList.remove('hidden');
-                         setAppState('idle');
-                    };
-
-                    audioPlayer.play().catch(e => {
-                         console.warn("Tutor audio blocked. Click to enable.");
-                         setAppState('idle');
-                    });
+                    // Revoke old URL and set new one
+                    if (currentTutorAudio) URL.revokeObjectURL(currentTutorAudio);
+                    currentTutorAudio = URL.createObjectURL(wavBlob);
+                    return currentTutorAudio;
 
                 } else {
                     throw new Error("TTS response was incomplete or format was wrong.");
@@ -515,12 +642,15 @@
                 console.error("TTS Error:", error);
                 errorFeedback.textContent = `TTS Error: Could not generate audio. (${error.message})`;
                 errorFeedback.classList.remove('hidden');
+                return null;
+            } finally {
                 setAppState('idle');
             }
         }
 
+
         /**
-         * Generates the LLM response (text) based on current chat history.
+         * Generates the LLM response (text) and audio URL.
          */
         async function getTutorResponse() {
             setAppState('loading');
@@ -550,8 +680,12 @@
                 const tutorText = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 
                 if (tutorText) {
-                    displayMessage('model', tutorText);
-                    await playTutorAudio(tutorText);
+                    // 1. Generate Audio URL (Blocking, but ensures data exists)
+                    const audioUrl = await generateTutorAudio(tutorText);
+                    
+                    // 2. Display message with the URL
+                    displayMessage('model', tutorText, audioUrl);
+                    
                 } else {
                     throw new Error("Received an empty response from the Language Model.");
                 }
@@ -561,9 +695,8 @@
                 errorFeedback.textContent = `Error: Could not get a response from the tutor. (${error.message})`;
                 errorFeedback.classList.remove('hidden');
                 chatHistory.pop(); 
-                setAppState('idle');
             } finally {
-                sendButton.disabled = chatInput.value.trim() === '';
+                setAppState('idle');
             }
         }
 
@@ -572,104 +705,26 @@
          */
         function sendUserMessage(userText) {
             userText = userText.trim();
-            if (!userText || isProcessing) return;
+            if (!userText || isProcessing || isReviewing) return;
 
-            // Clear any recorded audio state, as the message is now sent
+            // 1. Clear any recorded audio state, as the message is now sent
             resetRecordingState();
 
-            // 1. Display user message
+            // 2. Display user message
             displayMessage('user', userText);
 
-            // 2. Add to history
+            // 3. Add to history
             chatHistory.push({ role: 'user', parts: [{ text: userText }] });
 
-            // 3. Clear input
+            // 4. Clear input
             chatInput.value = '';
             sendButton.disabled = true;
 
-            // 4. Get AI response (which includes TTS)
+            // 5. Get AI response (which includes TTS)
             getTutorResponse();
         }
-        
-        /**
-         * Handles the Review/Listen button click.
-         */
-        function handleReviewClick() {
-            if (!recordedAudioUrl || isProcessing || isRecording) return;
-            
-            // Stop any ongoing playback
-            if (audioPlayer) {
-                audioPlayer.pause();
-                audioPlayer = null;
-                setAppState('idle');
-                isReviewing = false;
-                return;
-            }
 
-            // Start playback
-            isReviewing = true;
-            setAppState('idle'); // Just to update button state
-
-            audioPlayer = new Audio(recordedAudioUrl);
-            
-            audioPlayer.onplay = () => {
-                inputStatus.textContent = "Playing back your recording...";
-                reviewButton.classList.remove('bg-secondary');
-                reviewButton.classList.add('bg-red-500');
-            }
-
-            audioPlayer.onended = () => {
-                inputStatus.textContent = "Playback finished.";
-                reviewButton.classList.add('bg-secondary');
-                reviewButton.classList.remove('bg-red-500');
-                isReviewing = false;
-                audioPlayer = null;
-                setAppState('idle'); 
-            };
-            
-            audioPlayer.onerror = (e) => {
-                 console.error("Playback error:", e);
-                 inputStatus.textContent = "Playback error occurred.";
-                 reviewButton.classList.add('bg-secondary');
-                 reviewButton.classList.remove('bg-red-500');
-                 isReviewing = false;
-                 audioPlayer = null;
-                 setAppState('idle'); 
-            }
-
-            audioPlayer.play().catch(e => {
-                console.warn("Playback blocked:", e);
-                inputStatus.textContent = "Playback requires a user interaction first.";
-                isReviewing = false;
-                setAppState('idle');
-            });
-        }
-
-
-        // --- Event Listeners ---
-
-        micButton.addEventListener('click', handleMicClick);
-        reviewButton.addEventListener('click', handleReviewClick); // New Listener
-
-        sendButton.addEventListener('click', () => {
-            sendUserMessage(chatInput.value);
-        });
-
-        chatInput.addEventListener('input', () => {
-            sendButton.disabled = chatInput.value.trim() === '' || isProcessing || isRecording;
-        });
-
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!sendButton.disabled) {
-                    sendUserMessage(chatInput.value);
-                }
-            }
-        });
-
-
-        // --- UTILITIES ---
+        // --- UTILITIES (fetchWithRetry remains the same) ---
 
         async function fetchWithRetry(url, options, maxRetries = 5) {
             for (let i = 0; i < maxRetries; i++) {
@@ -698,10 +753,56 @@
         }
 
 
+        // --- Event Listeners ---
+
+        micButton.addEventListener('click', handleMicClick);
+        reviewButton.addEventListener('click', handleReviewClick); 
+
+        sendButton.addEventListener('click', () => {
+            sendUserMessage(chatInput.value);
+        });
+
+        chatInput.addEventListener('input', () => {
+            sendButton.disabled = chatInput.value.trim() === '' || isProcessing || isRecording || isReviewing;
+        });
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendButton.disabled) {
+                    sendUserMessage(chatInput.value);
+                }
+            }
+        });
+
         // Initialize on load
         window.onload = () => {
-            // Note: Native SpeechRecognition removed, replaced by MediaRecorder/Gemini multimodal
             setAppState('idle'); 
+            // We now rely on the user clicking the initial message to trigger audio generation/playback.
+            const initialMessage = document.getElementById('initial-ai-message');
+            
+            initialMessage.addEventListener('click', async () => {
+                const url = initialMessage.getAttribute('data-audio-url');
+                const status = initialMessage.querySelector('.tts-status');
+
+                if (url === 'pending') {
+                    // This is the first click: generate audio first.
+                    const initialText = initialMessage.getAttribute('data-text');
+                    initialMessage.setAttribute('data-audio-url', 'loading'); // Prevent concurrent clicks
+                    const generatedUrl = await generateTutorAudio(initialText);
+                    
+                    if (generatedUrl) {
+                        initialMessage.setAttribute('data-audio-url', generatedUrl);
+                        playAudio(generatedUrl, false, status);
+                    } else {
+                        initialMessage.setAttribute('data-audio-url', 'unavailable');
+                        status.textContent = "Audio unavailable.";
+                    }
+                } else if (url && url !== 'loading' && url !== 'unavailable') {
+                    // Audio is already generated, just play it.
+                    playAudio(url, false, status);
+                }
+            });
         };
     </script>
 </body>
